@@ -75,9 +75,12 @@ sb2_install \
   gcc gcc-c++ binutils make \
   pkgconfig flex bison \
   libdrm-devel zlib-devel expat-devel libffi-devel \
+  wayland-devel wayland-protocols-devel libwayland-egl-devel \
   python3-base python3-libs python3-setuptools \
   || true
 sb2_install meson ninja python3-mako 2>/dev/null || true
+# wayland bits are required for EGL_WL_bind_wayland_display (lipstick apps)
+sb2_install wayland-devel wayland-protocols-devel 2>/dev/null || true
 if ! sb2_t which meson >/dev/null 2>&1; then
   sb2_install python3-pip 2>/dev/null || true
   sb2_t pip3 install --user meson ninja mako || \
@@ -125,7 +128,7 @@ meson setup \"$BUILD\" \"$MESA_SRC\" \
   --libdir=lib64 \
   --wrap-mode=nofallback \
   -Dbuildtype=release \
-  -Dplatforms=[] \
+  -Dplatforms=wayland,surfaceless \
   -Degl=enabled \
   -Dgbm=enabled \
   -Dglx=disabled \
@@ -178,6 +181,14 @@ done < <(find "$DESTDIR/usr/lib64" -type f \( -name '*.so' -o -name '*.so.*' \) 
 [ "$max_ok" = 1 ] || exit 1
 test -e "$DESTDIR/usr/lib64/dri/msm_dri.so"
 test -e "$DESTDIR/usr/lib64/libEGL.so.1" -o -e "$DESTDIR/usr/lib64/libEGL.so.1.0.0"
+
+# Lipstick apps need this (EGL_WL_bind_wayland_display)
+EGL_SO=$(find "$DESTDIR/usr/lib64" -name 'libEGL.so*' -type f | head -1)
+if ! nm -D "$EGL_SO" 2>/dev/null | grep -q 'eglBindWaylandDisplayWL'; then
+  echo "ERROR: libEGL missing eglBindWaylandDisplayWL — Wayland platform not linked?" >&2
+  exit 1
+fi
+echo "OK: eglBindWaylandDisplayWL present in $(basename "$EGL_SO")"
 
 TAR="$OUT/mesa-freedreno-sfos-aarch64.tar.gz"
 tar -C "$DESTDIR" -czf "$TAR" usr
