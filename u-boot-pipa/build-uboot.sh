@@ -51,6 +51,9 @@ export CROSS_COMPILE
 make qcom_defconfig qcom-phone.config
 ./scripts/config --enable CONFIG_BLKMAP --enable CONFIG_CMD_BLKMAP
 ./scripts/config --set-str CONFIG_DEFAULT_DEVICE_TREE "$DTB_NAME"
+# Host tool mkeficapsule needs gnutls; we don't need EFI capsules for pipa boot.img
+./scripts/config --disable CONFIG_TOOLS_MKFICAPSULE 2>/dev/null || true
+./scripts/config --disable CONFIG_TOOLS_LIBCRYPTO 2>/dev/null || true
 # Refresh autoconf after scripts/config
 make olddefconfig
 

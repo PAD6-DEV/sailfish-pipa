@@ -44,7 +44,8 @@ jobs:
           sudo apt-get install -y -qq \
             gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
             make bison flex python3 python3-setuptools \
-            swig libssl-dev bc git gzip android-sdk-libsparse-utils \
+            swig libssl-dev libgnutls28-dev bc git gzip \
+            android-sdk-libsparse-utils \
             mkbootimg || true
           if ! command -v mkbootimg >/dev/null; then
             sudo apt-get install -y -qq android-tools-mkbootimg || true
