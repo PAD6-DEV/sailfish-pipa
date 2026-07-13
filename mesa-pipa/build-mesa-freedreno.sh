@@ -74,6 +74,8 @@ fi
 # Some SFOS headers live under /usr/include; ensure exists
 test -d "$SYSROOT/usr/include"
 test -f "$SYSROOT/usr/include/xf86drm.h" || test -f "$SYSROOT/usr/include/libdrm/xf86drm.h"
+# Link against SFOS libstdc++.so; never use its C++ headers (cross g++ provides those).
+rm -rf "$SYSROOT/usr/include/c++"
 
 MESA_SRC="$WORK/mesa-$MESA_VER"
 if [ ! -d "$MESA_SRC" ]; then
@@ -81,6 +83,30 @@ if [ ! -d "$MESA_SRC" ]; then
     "https://archive.mesa3d.org/mesa-${MESA_VER}.tar.xz"
   tar -C "$WORK" -xf "$WORK/mesa-$MESA_VER.tar.xz"
 fi
+
+# Mesa 24.1.x BitmaskEnum uses underlying_type_t; SFOS sysroot include order can
+# leave <type_traits> unresolved. Force the include + C++11 underlying_type form.
+python3 - "$MESA_SRC/src/freedreno/common/freedreno_common.h" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+text = p.read_text()
+text2 = text.replace(
+    "using underlying = typename std::underlying_type_t<E>;",
+    "using underlying = typename std::underlying_type<E>::type;",
+)
+if "#include <type_traits>" not in text2 and "#ifdef __cplusplus" in text2:
+    text2 = text2.replace(
+        "#ifdef __cplusplus",
+        "#ifdef __cplusplus\n\n#include <type_traits>",
+        1,
+    )
+if text2 != text:
+    p.write_text(text2)
+    print(f"patched {p}")
+else:
+    print(f"no patch needed for {p}")
+PY
 
 CROSS="$WORK/aarch64-sfos.txt"
 cat > "$CROSS" <<EOF
@@ -98,9 +124,10 @@ cpu = 'aarch64'
 endian = 'little'
 
 [built-in options]
-# gnu17 avoids Ubuntu toolchain emitting __isoc23_* against SFOS glibc 2.30
-c_args = ['--sysroot=${SYSROOT}', '-isystem${SYSROOT}/usr/include', '-std=gnu17', '-D_GNU_SOURCE']
-cpp_args = ['--sysroot=${SYSROOT}', '-isystem${SYSROOT}/usr/include', '-std=gnu++17', '-D_GNU_SOURCE']
+# gnu17: avoid Ubuntu toolchain emitting __isoc23_* against SFOS glibc 2.30.
+# Do not -isystem the SFOS include dir for C++ — that can shadow cross libstdc++.
+c_args = ['--sysroot=${SYSROOT}', '-std=gnu17', '-D_GNU_SOURCE']
+cpp_args = ['--sysroot=${SYSROOT}', '-std=gnu++17', '-D_GNU_SOURCE']
 c_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64']
 cpp_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64']
 EOF
