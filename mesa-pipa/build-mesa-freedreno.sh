@@ -81,41 +81,40 @@ sb2_install \
 sb2_install meson ninja python3-mako 2>/dev/null || true
 # wayland bits are required for EGL_WL_bind_wayland_display (lipstick apps)
 sb2_install wayland-devel wayland-protocols-devel 2>/dev/null || true
-# SFOS wayland-devel often omits wayland-egl-backend.{pc,h} needed by Mesa ≥22
+# SFOS wayland-devel often omits wayland-egl-backend.{pc,h} needed by Mesa ≥22.
+# Header is vendored in-repo (mesa-pipa/include/) — do not download at build time.
 sb2_t bash -lc '
 set -euo pipefail
 export PKG_CONFIG_PATH="$HOME/.local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 mkdir -p "$HOME/.local/lib/pkgconfig" "$HOME/.local/include"
-if [ ! -f /usr/include/wayland-egl-backend.h ] && [ ! -f "$HOME/.local/include/wayland-egl-backend.h" ]; then
-  curl -fL --retry 3 -A "sailfish-pipa-ci" \
-    -o "$HOME/.local/include/wayland-egl-backend.h" \
-    "https://gitlab.freedesktop.org/wayland/wayland/-/raw/1.22.0/src/wayland-egl-backend.h"
-  echo "Fetched wayland-egl-backend.h"
+# Copy vendored header into sb2 HOME (visible to the compiler)
+if [ -f /sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h ]; then
+  cp -f /sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h "$HOME/.local/include/"
+elif [ -f "$HOME/../sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h" ]; then
+  cp -f "$HOME/../sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h" "$HOME/.local/include/"
 fi
-# Prefer system include if present; else expose local via CFLAGS/PKG_CONFIG
-INC_DIR=/usr/include
-if [ ! -f /usr/include/wayland-egl-backend.h ]; then
-  INC_DIR=$HOME/.local/include
-  # Also try to install into target (may fail without root)
-  cp -f "$HOME/.local/include/wayland-egl-backend.h" /usr/include/ 2>/dev/null || true
-fi
-if ! pkg-config --exists wayland-egl-backend; then
-  cat > "$HOME/.local/lib/pkgconfig/wayland-egl-backend.pc" <<EOF
-prefix=/usr
+# Also try host-side path baked into the worktree during docker -v
+for p in /sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h \
+         /home/mersdk/mesa-pipa-include/wayland-egl-backend.h; do
+  [ -f "$p" ] && cp -f "$p" "$HOME/.local/include/" && break
+done
+# Force into /usr/include if we can (sdk-build may not allow; best-effort)
+cp -f "$HOME/.local/include/wayland-egl-backend.h" /usr/include/ 2>/dev/null || true
+test -f "$HOME/.local/include/wayland-egl-backend.h"
+cat > "$HOME/.local/lib/pkgconfig/wayland-egl-backend.pc" <<EOF
+prefix=$HOME/.local
 exec_prefix=\${prefix}
-libdir=\${prefix}/lib64
-includedir=${INC_DIR}
+libdir=\${prefix}/lib
+includedir=\${prefix}/include
 
 Name: wayland-egl-backend
-Description: Backend wayland-egl interface (stub for SFOS)
+Description: Backend wayland-egl interface (vendored for SFOS)
 Version: 3
 Cflags: -I\${includedir}
 EOF
-  echo "Created stub wayland-egl-backend.pc (includedir=$INC_DIR)"
-fi
 pkg-config --modversion wayland-egl-backend
 pkg-config --cflags wayland-egl-backend
-ls /usr/include/wayland-egl*.h "$HOME/.local/include/wayland-egl"*.h 2>/dev/null || true
+ls -la "$HOME/.local/include/wayland-egl-backend.h"
 '
 if ! sb2_t which meson >/dev/null 2>&1; then
   sb2_install python3-pip 2>/dev/null || true
