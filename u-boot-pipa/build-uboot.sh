@@ -18,8 +18,8 @@ else
   exit 1
 fi
 
-command -v mkbootimg >/dev/null 2>&1 || {
-  echo "ERROR: mkbootimg not found (android-tools / mkbootimg package)" >&2
+command -v python3 >/dev/null 2>&1 || {
+  echo "ERROR: python3 required for mkbootimg.py" >&2
   exit 1
 }
 
@@ -76,7 +76,16 @@ gzip -f -k u-boot-nodtb.bin
 PAYLOAD="$OUT/u-boot-xiaomi-pipa.bin"
 IMG="$OUT/u-boot-xiaomi-pipa.img"
 cat u-boot-nodtb.bin.gz "$DTB_FILE" > "$PAYLOAD"
-mkbootimg --kernel "$PAYLOAD" -o "$IMG"
+
+MKBOOTIMG="$ROOT/mkbootimg.py"
+if [ -x "$MKBOOTIMG" ] || [ -f "$MKBOOTIMG" ]; then
+  python3 "$MKBOOTIMG" --kernel "$PAYLOAD" -o "$IMG"
+elif command -v mkbootimg >/dev/null 2>&1; then
+  mkbootimg --kernel "$PAYLOAD" -o "$IMG"
+else
+  echo "ERROR: no mkbootimg (expected $MKBOOTIMG)" >&2
+  exit 1
+fi
 
 ls -lh "$PAYLOAD" "$IMG"
 echo "OK: $IMG"
