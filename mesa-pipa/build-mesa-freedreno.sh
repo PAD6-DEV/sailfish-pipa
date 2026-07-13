@@ -112,12 +112,13 @@ export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
 
 BUILD="$WORK/build"
 rm -rf "$BUILD"
+# Mesa 24+: drm/surfaceless are not -Dplatforms choices; GBM+EGL provide DRM/eglfs.
 meson setup "$BUILD" "$MESA_SRC" \
   --cross-file "$CROSS" \
   --prefix=/usr \
   --libdir=lib64 \
   -Dbuildtype=release \
-  -Dplatforms=surfaceless,drm \
+  -Dplatforms=[] \
   -Degl=enabled \
   -Dgbm=enabled \
   -Dglx=disabled \
