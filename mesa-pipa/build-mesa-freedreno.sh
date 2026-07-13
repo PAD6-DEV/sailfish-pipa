@@ -212,13 +212,21 @@ done < <(find "$DESTDIR/usr/lib64" -type f \( -name '*.so' -o -name '*.so.*' \) 
 test -e "$DESTDIR/usr/lib64/dri/msm_dri.so"
 test -e "$DESTDIR/usr/lib64/libEGL.so.1" -o -e "$DESTDIR/usr/lib64/libEGL.so.1.0.0"
 
-# Lipstick apps need this (EGL_WL_bind_wayland_display)
+# Lipstick apps need EGL_WL_bind_wayland_display. In Mesa ≥23 these entrypoints
+# are static (eglGetProcAddress only) — nm -D will never see them. Verify the
+# Wayland platform is actually linked instead (NEEDED libwayland-server).
 EGL_SO=$(find "$DESTDIR/usr/lib64" -name 'libEGL.so*' -type f | head -1)
-if ! nm -D "$EGL_SO" 2>/dev/null | grep -q 'eglBindWaylandDisplayWL'; then
-  echo "ERROR: libEGL missing eglBindWaylandDisplayWL — Wayland platform not linked?" >&2
+echo "Checking Wayland EGL linkage in $(basename "$EGL_SO") ..."
+objdump -p "$EGL_SO" | grep NEEDED || true
+if ! objdump -p "$EGL_SO" | grep -q 'NEEDED.*libwayland-server'; then
+  echo "ERROR: libEGL not linked to libwayland-server — Wayland platform missing?" >&2
   exit 1
 fi
-echo "OK: eglBindWaylandDisplayWL present in $(basename "$EGL_SO")"
+if ! objdump -p "$EGL_SO" | grep -q 'NEEDED.*libwayland-client'; then
+  echo "ERROR: libEGL not linked to libwayland-client — Wayland platform missing?" >&2
+  exit 1
+fi
+echo "OK: libEGL links wayland-server+client (EGL_WL_bind_wayland_display available)"
 
 TAR="$OUT/mesa-freedreno-sfos-aarch64.tar.gz"
 tar -C "$DESTDIR" -czf "$TAR" usr
