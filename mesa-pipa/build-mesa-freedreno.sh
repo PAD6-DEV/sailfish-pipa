@@ -79,28 +79,15 @@ sb2_install \
   python3-base python3-libs python3-setuptools \
   || true
 sb2_install meson ninja python3-mako 2>/dev/null || true
-# wayland bits are required for EGL_WL_bind_wayland_display (lipstick apps)
-sb2_install wayland-devel wayland-protocols-devel 2>/dev/null || true
 # SFOS wayland-devel often omits wayland-egl-backend.{pc,h} needed by Mesa ≥22.
-# Header is vendored in-repo (mesa-pipa/include/) — do not download at build time.
-sb2_t bash -lc '
-set -euo pipefail
-export PKG_CONFIG_PATH="$HOME/.local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
-mkdir -p "$HOME/.local/lib/pkgconfig" "$HOME/.local/include"
-# Copy vendored header into sb2 HOME (visible to the compiler)
-if [ -f /sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h ]; then
-  cp -f /sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h "$HOME/.local/include/"
-elif [ -f "$HOME/../sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h" ]; then
-  cp -f "$HOME/../sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h" "$HOME/.local/include/"
+# Header is vendored in-repo. Copy it into $HOME (visible to sb2) BEFORE sb2 runs.
+HDR_VENDOR="/sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h"
+if [ ! -f "$HDR_VENDOR" ]; then
+  HDR_VENDOR="$ROOT/include/wayland-egl-backend.h"
 fi
-# Also try host-side path baked into the worktree during docker -v
-for p in /sailfish-pipa/mesa-pipa/include/wayland-egl-backend.h \
-         /home/mersdk/mesa-pipa-include/wayland-egl-backend.h; do
-  [ -f "$p" ] && cp -f "$p" "$HOME/.local/include/" && break
-done
-# Force into /usr/include if we can (sdk-build may not allow; best-effort)
-cp -f "$HOME/.local/include/wayland-egl-backend.h" /usr/include/ 2>/dev/null || true
-test -f "$HOME/.local/include/wayland-egl-backend.h"
+test -f "$HDR_VENDOR"
+mkdir -p "$HOME/.local/include" "$HOME/.local/lib/pkgconfig"
+cp -f "$HDR_VENDOR" "$HOME/.local/include/wayland-egl-backend.h"
 cat > "$HOME/.local/lib/pkgconfig/wayland-egl-backend.pc" <<EOF
 prefix=$HOME/.local
 exec_prefix=\${prefix}
@@ -112,10 +99,15 @@ Description: Backend wayland-egl interface (vendored for SFOS)
 Version: 3
 Cflags: -I\${includedir}
 EOF
-pkg-config --modversion wayland-egl-backend
+# Best-effort install into target /usr/include via sb2
+sb2_install wayland-devel wayland-protocols-devel 2>/dev/null || true
+sb2_t bash -lc "
+set -euo pipefail
+export PKG_CONFIG_PATH=\"\$HOME/.local/lib/pkgconfig:\${PKG_CONFIG_PATH:-}\"
+cp -f \"\$HOME/.local/include/wayland-egl-backend.h\" /usr/include/ 2>/dev/null || true
 pkg-config --cflags wayland-egl-backend
-ls -la "$HOME/.local/include/wayland-egl-backend.h"
-'
+ls -la \"\$HOME/.local/include/wayland-egl-backend.h\"
+"
 if ! sb2_t which meson >/dev/null 2>&1; then
   sb2_install python3-pip 2>/dev/null || true
   sb2_t pip3 install --user meson ninja mako || \
