@@ -98,8 +98,9 @@ cpu = 'aarch64'
 endian = 'little'
 
 [built-in options]
-c_args = ['--sysroot=${SYSROOT}', '-I${SYSROOT}/usr/include']
-cpp_args = ['--sysroot=${SYSROOT}', '-I${SYSROOT}/usr/include']
+# gnu17 avoids Ubuntu toolchain emitting __isoc23_* against SFOS glibc 2.30
+c_args = ['--sysroot=${SYSROOT}', '-isystem${SYSROOT}/usr/include', '-std=gnu17', '-D_GNU_SOURCE']
+cpp_args = ['--sysroot=${SYSROOT}', '-isystem${SYSROOT}/usr/include', '-std=gnu++17', '-D_GNU_SOURCE']
 c_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64']
 cpp_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64']
 EOF
@@ -112,11 +113,13 @@ export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
 
 BUILD="$WORK/build"
 rm -rf "$BUILD"
+# No meson wraps/subprojects (libarchive wrap pulls C23 symbols missing on SFOS glibc).
 # Mesa 24+: drm/surfaceless are not -Dplatforms choices; GBM+EGL provide DRM/eglfs.
 meson setup "$BUILD" "$MESA_SRC" \
   --cross-file "$CROSS" \
   --prefix=/usr \
   --libdir=lib64 \
+  --wrap-mode=nofallback \
   -Dbuildtype=release \
   -Dplatforms=[] \
   -Degl=enabled \
@@ -134,7 +137,9 @@ meson setup "$BUILD" "$MESA_SRC" \
   -Dvalgrind=disabled \
   -Dlibunwind=disabled \
   -Dlmsensors=disabled \
-  -Dbuild-tests=false
+  -Dbuild-tests=false \
+  -Dtools=[] \
+  -Dxmlconfig=disabled
 
 meson compile -C "$BUILD" -j"$JOBS"
 rm -rf "$DESTDIR"
