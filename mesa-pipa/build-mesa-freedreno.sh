@@ -113,7 +113,8 @@ if text2 != text:
 PY
 
 BUILD="$WORK/build"
-# Build entirely under $HOME so sb2 sees the tree.
+# meson compile breaks under sb2 (pathlib samefile('.') → FileNotFoundError).
+# Configure with meson, then drive ninja directly from the build dir.
 sb2_t bash -lc "
 set -euo pipefail
 export PATH=\"\$HOME/.local/bin:/usr/bin:\$PATH\"
@@ -144,10 +145,11 @@ meson setup \"$BUILD\" \"$MESA_SRC\" \
   -Dbuild-tests=false \
   -Dtools=[] \
   -Dxmlconfig=disabled
-meson compile -C \"$BUILD\" -j\"$JOBS\"
+cd \"$BUILD\"
+ninja -j\"$JOBS\"
 rm -rf \"$DESTDIR\"
 mkdir -p \"$DESTDIR\"
-DESTDIR=\"$DESTDIR\" meson install -C \"$BUILD\"
+DESTDIR=\"$DESTDIR\" meson install --no-rebuild
 "
 
 GALLIUM=$(find "$DESTDIR/usr/lib64" -name 'libgallium*.so' | head -1 || true)
