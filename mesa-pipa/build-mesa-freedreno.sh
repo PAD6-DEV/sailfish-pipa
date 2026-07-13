@@ -84,8 +84,9 @@ sb2_install wayland-devel wayland-protocols-devel 2>/dev/null || true
 # SFOS wayland-devel often omits wayland-egl-backend.pc (needed by Mesa ≥22)
 sb2_t bash -lc '
 set -euo pipefail
+export PKG_CONFIG_PATH="$HOME/.local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+mkdir -p "$HOME/.local/lib/pkgconfig"
 if ! pkg-config --exists wayland-egl-backend; then
-  mkdir -p "$HOME/.local/lib/pkgconfig"
   cat > "$HOME/.local/lib/pkgconfig/wayland-egl-backend.pc" <<EOF
 prefix=/usr
 exec_prefix=\${prefix}
@@ -100,7 +101,8 @@ EOF
   echo "Created stub wayland-egl-backend.pc"
 fi
 pkg-config --modversion wayland-egl-backend
-test -f /usr/include/wayland-egl-backend.h -o -f /usr/include/wayland-egl-core.h
+pkg-config --cflags wayland-egl-backend
+ls /usr/include/wayland-egl*.h 2>/dev/null || true
 '
 if ! sb2_t which meson >/dev/null 2>&1; then
   sb2_install python3-pip 2>/dev/null || true
