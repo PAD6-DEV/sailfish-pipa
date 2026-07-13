@@ -1,16 +1,17 @@
 %package -n patterns-sailfish-device-adaptation-pipa
 Summary: Sailfish HW Adaptation Xiaomi Pad 6 (pipa)
 
-Requires: qt5-plugin-generic-evdev
+# Evdev is built into the eglfs platform driver (pinetab2)
+Obsoletes: qt5-plugin-generic-evdev
 
 # Graphics (mesa + eglfs KMS — mainline, not hybris)
 Requires: mesa-dri-drivers
 Requires: mesa-libEGL
 Requires: mesa-libGLESv2
 Requires: mesa-libgbm
-Requires: mesa-libglapi
 Requires: wayland-egl
 Requires: qt5-plugin-platform-eglfs
+Requires: mtdev
 
 # Splash screen
 Requires: plymouth-lite
@@ -19,10 +20,10 @@ Requires: plymouth-lite-theme-default
 # Bluetooth tools
 Requires: bluez5-tools
 
-# Vibra (if ffmemless available on kernel)
+# Vibra
 Requires: libngf-qt5-qtfeedback
 
-# Sensors — mainline / SSC path; hybris sensorfw not used
+# Sensors — mainline path; hybris sensorfw not used
 #Requires: hybris-libsensorfw-qt5
 
 # Pulseaudio
@@ -56,17 +57,16 @@ Requires: rfkill
 # Device lock
 Requires: jolla-devicelock-plugin-encsfa
 
-# No cellular / ofono on tablet bring-up
+# No cellular on tablet
 #Requires: ofono
 
 # sound
 Requires: alsa-utils
 Requires: alsa-ucm-conf
 
-# Cameras (V4L2 / libcamera later)
+# Cameras
 Requires: v4l-utils
 
-# Kernel + config packages produced by this adaptation
 Requires: kernel-adaptation-pipa
 Requires: droid-config-pipa-sailfish
 Requires: droid-config-pipa-pulseaudio-settings
@@ -75,12 +75,7 @@ Requires: droid-config-pipa-preinit-plugin
 Requires: droid-config-pipa-bluez5
 Requires: droid-hal-version-pipa
 
-# Home encryption (community)
 Requires: sailfish-device-encryption-community
-
-# Developer / SSH reachability out of the box
-Requires: openssh-server
-Requires: openssh-clients
 
 %description -n patterns-sailfish-device-adaptation-pipa
 Pattern with packages for Xiaomi Pad 6 (pipa) HW Adaptation

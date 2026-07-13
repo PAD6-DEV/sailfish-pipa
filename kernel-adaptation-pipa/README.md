@@ -1,14 +1,29 @@
 # kernel-adaptation-pipa
 
-Packages the Xiaomi Pad 6 mainline kernel for Sailfish OS.
+Packages / stages the Xiaomi Pad 6 **mainline** kernel for Sailfish OS.
 
-Unlike PinePhone (`kernel-adaptation-pine64` which builds megi from source),
-pipa uses **prebuilt** `Image` + modules + DTB from [pipa-pkgs](https://thespider2.github.io/pipa-pkgs/repo/)
-or an existing Linux boot partition.
+Pipa boots via **Mu-Silicium UEFI + GRUB** (ESP + `cust` boot partition).
+Do **not** use Android `boot.img` here (that is for hybris ports).
+
+## Stage real kernel from pipa-pkgs
 
 ```bash
-./scripts/stage-prebuilt-kernel.sh /path/to/extracted-boot
-# then build RPM in Platform SDK against rpm/kernel-adaptation-pipa.spec
+curl -fL -o /tmp/linux-pipa.pkg.tar.xz \
+  https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.0.8-21-aarch64.pkg.tar.xz
+./scripts/stage-prebuilt-kernel.sh /tmp/extract-dir
+# or:
+mkdir -p /tmp/lp && tar -C /tmp/lp -xf /tmp/linux-pipa.pkg.tar.xz
+./scripts/stage-prebuilt-kernel.sh /tmp/lp
 ```
 
-Boot on device remains **Mu-Silicium UEFI + GRUB** (not U-Boot).
+Expect `prebuilt/boot/Image` (~40MB), `prebuilt/boot/dtbs/qcom/sm8250-xiaomi-pipa*.dtb`,
+and `prebuilt/lib/modules/<kver>/`.
+
+Then build flash images:
+
+```bash
+sudo ../flash/pack-flashables.sh \
+  --rootfs-tbz /path/to/sfe-pipa-*.tar.bz2 \
+  --kernel-prebuilt ./prebuilt \
+  --outdir /path/to/out
+```

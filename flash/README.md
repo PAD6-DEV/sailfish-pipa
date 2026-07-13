@@ -1,18 +1,20 @@
 # Flashing Sailfish OS on Xiaomi Pad 6
 
-Partition map (same as Ultramarine/Nemo pipa):
+Boot: **Qualcomm U-Boot** + rootfs on GPT **`linux`** (built entirely in CI).
 
-| Image | Partition |
-|-------|-----------|
-| `silicium.img` | `boot_ab` |
-| `sfos_esp.raw` | `rawdump` |
-| `sfos_boot.raw` | `cust` |
-| `sfos_rootfs.raw` | `userdata` or `linux` |
+| File | Partition |
+|------|-----------|
+| `u-boot-xiaomi-pipa.img` | `boot_ab` |
+| `sfos_rootfs.raw` | `linux` (`LABEL=sfos_root`, Mesa freedreno + `/boot`/extlinux) |
+
+## Build
+
+Push / **workflow_dispatch** — download artifact `sailfish-pipa-flash`.
+
+## Flash
 
 ```bash
-./pack-rootfs.sh ../image-ci/pipa/sfe-pipa-*/sfe-pipa-*.tar.bz2 ./out
-# copy silicium.img + ESP into out/
-./flash.sh ./out
+bash flash/flash.sh /path/to/sailfish-pipa-flash
 ```
 
-USB SSH after boot: `172.16.42.1` (RNDIS), user `nemo` / developer mode.
+`userdata` is untouched. Optional `ERASE_DTBO=0` to skip dtbo erase.

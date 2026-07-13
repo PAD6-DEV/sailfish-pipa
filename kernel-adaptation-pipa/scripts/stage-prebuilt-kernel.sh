@@ -1,39 +1,54 @@
 #!/usr/bin/env bash
-# Stage prebuilt kernel artifacts for kernel-adaptation-pipa RPM.
+# Stage prebuilt kernel artifacts for kernel-adaptation-pipa / pack-flashables.
 # Usage:
-#   ./scripts/stage-prebuilt-kernel.sh /path/to/boot-tree
-# boot-tree should contain Image and optionally dtb/ and lib/modules/
+#   ./scripts/stage-prebuilt-kernel.sh /path/to/dir   # contains boot/ or Image
+#   ./scripts/stage-prebuilt-kernel.sh /path/to/linux-pipa-*.pkg.tar.xz
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="${1:?path to directory containing Image (and optional dtb/, lib/modules/)}"
+SRC="${1:?path to kernel tree or .pkg.tar.xz}"
 DEST="$ROOT/prebuilt"
 rm -rf "$DEST"
-mkdir -p "$DEST/boot"
+mkdir -p "$DEST/boot" "$DEST/lib"
 
-if [ -f "$SRC/Image" ]; then
+TMP=""
+cleanup() { [ -n "$TMP" ] && rm -rf "$TMP"; }
+trap cleanup EXIT
+
+if [ -f "$SRC" ] && [[ "$SRC" == *.pkg.tar.xz || "$SRC" == *.tar.xz || "$SRC" == *.tar.zst ]]; then
+  TMP=$(mktemp -d)
+  case "$SRC" in
+    *.zst) tar -C "$TMP" --zstd -xf "$SRC" ;;
+    *) tar -C "$TMP" -xf "$SRC" ;;
+  esac
+  SRC="$TMP"
+fi
+
+if [ -f "$SRC/boot/Image" ] || [ -f "$SRC/boot/Image.gz" ]; then
+  cp -a "$SRC/boot/." "$DEST/boot/"
+elif [ -f "$SRC/Image" ]; then
   cp -a "$SRC/Image" "$DEST/boot/Image"
-elif [ -f "$SRC/boot/Image" ]; then
-  cp -a "$SRC/boot/Image" "$DEST/boot/Image"
-elif [ -f "$SRC/vmlinuz" ]; then
-  cp -a "$SRC/vmlinuz" "$DEST/boot/Image"
+  [ -f "$SRC/Image.gz" ] && cp -a "$SRC/Image.gz" "$DEST/boot/Image.gz"
+  [ -d "$SRC/dtbs" ] && cp -a "$SRC/dtbs" "$DEST/boot/dtbs"
 else
-  echo "No Image/vmlinuz under $SRC" >&2
+  echo "No Image under $SRC" >&2
   exit 1
 fi
 
-if [ -d "$SRC/dtb" ]; then
-  cp -a "$SRC/dtb" "$DEST/boot/dtb"
-elif [ -d "$SRC/boot/dtb" ]; then
-  cp -a "$SRC/boot/dtb" "$DEST/boot/dtb"
-fi
-
-if [ -d "$SRC/lib/modules" ]; then
-  mkdir -p "$DEST/lib"
+if [ -d "$SRC/usr/lib/modules" ]; then
+  cp -a "$SRC/usr/lib/modules" "$DEST/lib/modules"
+elif [ -d "$SRC/lib/modules" ]; then
   cp -a "$SRC/lib/modules" "$DEST/lib/modules"
-elif [ -d "$SRC/modules" ]; then
-  mkdir -p "$DEST/lib"
-  cp -a "$SRC/modules" "$DEST/lib/modules"
 fi
 
-echo "Staged into $DEST"
-find "$DEST" -type f | head -40
+if [ ! -f "$DEST/boot/Image" ] && [ -f "$DEST/boot/Image.gz" ]; then
+  gunzip -c "$DEST/boot/Image.gz" > "$DEST/boot/Image"
+fi
+
+sz=$(wc -c < "$DEST/boot/Image")
+if [ "$sz" -lt 1000000 ]; then
+  echo "ERROR: Image is only ${sz} bytes (placeholder?)" >&2
+  exit 1
+fi
+echo "Staged ${sz} byte Image into $DEST"
+find "$DEST" -type f | head -40 || true
+exit 0

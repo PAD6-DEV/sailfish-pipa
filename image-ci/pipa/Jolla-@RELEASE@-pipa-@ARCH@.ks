@@ -2,6 +2,9 @@
 # KickstartType: release
 # SuggestedImageType: fs
 # SuggestedArchitecture: aarch64
+#
+# Modeled on dont_be_evil-ci pinetab2 kickstart:
+# https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci
 
 timezone --utc UTC
 
@@ -9,6 +12,7 @@ part / --size 500 --ondisk sda --fstype=ext4
 
 repo --name=adaptation-xiaomi-pipa-@RELEASE@ --baseurl=file:///parentroot/home/ayman/sailfish-pipa/repo/adaptation
 repo --name=adaptation-community-common-@RELEASE@ --baseurl=https://repo.sailfishos.org/obs/nemo:/devel:/hw:/common/sailfish_latest_@ARCH@/
+repo --name=adaptation-native-common-@RELEASE@ --baseurl=https://repo.sailfishos.org/obs/nemo:/devel:/hw:/native-common/sailfish_latest_@ARCH@/
 repo --name=sailfishos-chum-@RELEASEMAJMIN@ --baseurl=http://repo.sailfishos.org/obs/sailfishos:/chum/@RELEASEMAJMIN@_@ARCH@/
 
 repo --name=apps-@RELEASE@ --baseurl=https://releases.jolla.com/jolla-apps/@RELEASE@/@ARCH@/
@@ -53,6 +57,17 @@ ssu mode 4
 getent group wheel >/dev/null || groupadd -g 10 wheel || true
 if id nemo >/dev/null 2>&1; then
   usermod -aG wheel nemo || true
+fi
+
+# Ensure first user password is usable for session (not expired)
+if [ -n "$DEVICEUSER" ]; then
+  echo "${DEVICEUSER}:1234" | chpasswd || true
+  TODAY=$(( $(date +%s) / 86400 ))
+  if [ -f /etc/shadow ] && grep -q "^${DEVICEUSER}:" /etc/shadow; then
+    awk -F: -v u="$DEVICEUSER" -v d="$TODAY" 'BEGIN{OFS=FS} $1==u{$3=d} {print}' /etc/shadow > /etc/shadow.new
+    mv /etc/shadow.new /etc/shadow
+    chmod 640 /etc/shadow
+  fi
 fi
 %end
 

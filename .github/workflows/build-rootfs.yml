@@ -1,5 +1,6 @@
-name: Build Sailfish pipa rootfs
+name: Build Sailfish pipa image (U-Boot + Mesa + rootfs)
 
+# All heavy builds run here — do not rely on local mic/uboot/mesa builds.
 on:
   workflow_dispatch:
   push:
@@ -11,6 +12,8 @@ on:
       - "bootstrap/**"
       - "image-ci/**"
       - "flash/**"
+      - "u-boot-pipa/**"
+      - "mesa-pipa/**"
       - "scripts/**"
       - ".github/workflows/build-rootfs.yml"
 
@@ -19,17 +22,91 @@ permissions:
   actions: write
 
 concurrency:
-  group: sailfish-pipa-rootfs
+  group: sailfish-pipa-image
   cancel-in-progress: true
 
 env:
   SDK_IMAGE: coderus/sailfishos-platform-sdk-base:4.6.0.13
+  KERNEL_PKG_URL: https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.0.8-21-aarch64.pkg.tar.xz
 
 jobs:
-  build-adaptation-and-rootfs:
+  build-uboot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain + mkbootimg
+        run: |
+          set -eux
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            make bison flex python3 python3-setuptools \
+            swig libssl-dev bc git gzip android-sdk-libsparse-utils \
+            mkbootimg || true
+          if ! command -v mkbootimg >/dev/null; then
+            sudo apt-get install -y -qq android-tools-mkbootimg || true
+          fi
+          command -v aarch64-linux-gnu-gcc
+          command -v mkbootimg || {
+            curl -fsSL -o /tmp/mkbootimg \
+              https://raw.githubusercontent.com/osm0sis/mkbootimg/master/mkbootimg
+            sudo install -m755 /tmp/mkbootimg /usr/local/bin/mkbootimg
+          }
+
+      - name: Build U-Boot (linux blkmap)
+        run: |
+          set -eux
+          chmod +x u-boot-pipa/build-uboot.sh
+          CROSS_COMPILE=aarch64-linux-gnu- bash u-boot-pipa/build-uboot.sh
+          test -s u-boot-pipa/out/u-boot-xiaomi-pipa.img
+
+      - name: Upload U-Boot
+        uses: actions/upload-artifact@v4
+        with:
+          name: u-boot-xiaomi-pipa
+          path: u-boot-pipa/out/u-boot-xiaomi-pipa.img
+          if-no-files-found: error
+          retention-days: 30
+
+  build-mesa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install cross toolchain + meson
+        run: |
+          set -eux
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            meson ninja-build pkg-config python3-mako python3-setuptools \
+            curl rpm2cpio cpio binutils xz-utils flex bison libssl-dev
+
+      - name: Build Mesa freedreno (SFOS glibc 2.30 sysroot)
+        run: |
+          set -eux
+          chmod +x mesa-pipa/build-mesa-freedreno.sh
+          bash mesa-pipa/build-mesa-freedreno.sh
+          test -s mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
+          # Ensure msm dri is in the archive
+          tar -tzf mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz | grep -E 'dri/msm_dri\.so$'
+
+      - name: Upload Mesa
+        uses: actions/upload-artifact@v4
+        with:
+          name: mesa-freedreno-sfos
+          path: mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  build-rootfs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,9 +114,11 @@ jobs:
       - name: Pull Platform SDK image
         run: docker pull "$SDK_IMAGE"
 
-      - name: Verify mic in SDK
+      - name: Sync sparse into bootstrap package
         run: |
-          docker run --rm "$SDK_IMAGE" bash -lc 'command -v mic; mic --help 2>&1 | head -5'
+          set -eux
+          rm -rf bootstrap/droid-config-pipa/sparse
+          cp -a droid-config-pipa/sparse bootstrap/droid-config-pipa/sparse
 
       - name: Build bootstrap RPMs + mic rootfs in SDK
         run: |
@@ -52,11 +131,9 @@ jobs:
             bash -lc '
               set -eux
               mkdir -p repo/adaptation
-              # Bootstrap RPMs (no mb2 target required)
               zypper -n in createrepo_c rpm-build tar gzip || true
               ./bootstrap/build-rpms.sh
               test "$(find repo/adaptation -name "*.rpm" | wc -l)" -ge 3
-              # mic
               cd image-ci
               source root.env
               source pipa/pipa.env
@@ -64,28 +141,85 @@ jobs:
               ./run-mic.sh
             '
 
-      - name: Pack flashable rootfs raw
-        if: success()
-        run: |
-          set -eux
-          TBZ=$(ls -1 image-ci/pipa/sfe-pipa-*/sfe-pipa-*.tar.bz2 | head -1)
-          test -s "$TBZ"
-          mkdir -p flash/out
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq e2fsprogs rsync
-          sudo bash flash/pack-rootfs.sh "$TBZ" flash/out
-          ls -lh "$TBZ" flash/out
-
-      - name: Upload artifacts
+      - name: Upload rootfs tarball
         uses: actions/upload-artifact@v4
         with:
-          name: sailfish-pipa-rootfs
+          name: sailfish-pipa-rootfs-tbz
           path: |
             image-ci/pipa/sfe-*/**/*.tar.bz2
             image-ci/pipa/sfe-*/**/*.packages
             image-ci/pipa/sfe-*/**/*.ks
             image-ci/pipa/sfe-*/**/*.urls
-            flash/out/**
             repo/adaptation/*.rpm
+          if-no-files-found: error
+          retention-days: 30
+
+  pack-flash-set:
+    needs: [build-uboot, build-mesa, build-rootfs]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download U-Boot
+        uses: actions/download-artifact@v4
+        with:
+          name: u-boot-xiaomi-pipa
+          path: u-boot-pipa/out
+
+      - name: Download Mesa freedreno
+        uses: actions/download-artifact@v4
+        with:
+          name: mesa-freedreno-sfos
+          path: mesa-pipa/out
+
+      - name: Download rootfs tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: sailfish-pipa-rootfs-tbz
+          path: artifacts-rootfs
+
+      - name: Install pack tools + stage kernel
+        run: |
+          set -eux
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq e2fsprogs rsync zstd wget
+          TBZ=$(find artifacts-rootfs -name 'sfe-pipa-*.tar.bz2' | head -1)
+          test -s "$TBZ"
+          echo "TBZ=$TBZ" >> "$GITHUB_ENV"
+          test -s mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
+          mkdir -p /tmp/kernel-pkg
+          wget -q -O /tmp/kernel-pkg/linux-pipa.pkg.tar.xz "$KERNEL_PKG_URL"
+          chmod +x kernel-adaptation-pipa/scripts/stage-prebuilt-kernel.sh
+          bash kernel-adaptation-pipa/scripts/stage-prebuilt-kernel.sh /tmp/kernel-pkg/linux-pipa.pkg.tar.xz
+          test -s kernel-adaptation-pipa/prebuilt/boot/Image
+
+      - name: Pack flash set (U-Boot + Mesa + linux rootfs)
+        run: |
+          set -eux
+          mkdir -p flash/out
+          chmod +x flash/pack-flashables.sh
+          sudo TARGET_PART=linux \
+            bash flash/pack-flashables.sh \
+            --rootfs-tbz "$TBZ" \
+            --kernel-prebuilt "$GITHUB_WORKSPACE/kernel-adaptation-pipa/prebuilt" \
+            --uboot-img "$GITHUB_WORKSPACE/u-boot-pipa/out/u-boot-xiaomi-pipa.img" \
+            --mesa-tar "$GITHUB_WORKSPACE/mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz" \
+            --outdir "$GITHUB_WORKSPACE/flash/out" \
+            --target-part linux
+          ls -lh flash/out
+          test -s flash/out/u-boot-xiaomi-pipa.img
+          test -s flash/out/sfos_rootfs.raw
+          grep -qx linux flash/out/target-part.txt
+
+      - name: Upload flash set
+        uses: actions/upload-artifact@v4
+        with:
+          name: sailfish-pipa-flash
+          path: |
+            flash/out/u-boot-xiaomi-pipa.img
+            flash/out/sfos_rootfs.raw
+            flash/out/target-part.txt
           if-no-files-found: error
           retention-days: 30

@@ -2,11 +2,24 @@
 
 Repo: https://github.com/PAD6-DEV/sailfish-pipa
 
-GitHub Actions builds a Sailfish rootfs like [dont_be_evil-ci](https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/):
+All image artifacts are produced by GitHub Actions — **no local mic/U-Boot/Mesa builds required**.
 
-1. `coderus/sailfishos-platform-sdk-base:4.6.0.13` via Docker on `ubuntu-24.04`
-2. Bootstrap RPMs (`bootstrap/`) → `repo/adaptation`
-3. `mic create fs` from `image-ci/pipa/` kickstart
-4. Artifact `sailfish-pipa-rootfs` (tarball + optional flash raws)
+Workflow: [`.github/workflows/build-rootfs.yml`](../.github/workflows/build-rootfs.yml)
 
-Workflow: `.github/workflows/build-rootfs.yml`
+| Job | Output |
+|-----|--------|
+| `build-uboot` | `u-boot-xiaomi-pipa.img` (blkmap GPT **linux**) |
+| `build-mesa` | `mesa-freedreno-sfos-aarch64.tar.gz` (msm/freedreno for glibc 2.30) |
+| `build-rootfs` | mic `sfe-pipa-*.tar.bz2` (full UI via pinetab2-style patterns) |
+| `pack-flash-set` | injects Mesa + kernel into rootfs, packs flash set |
+
+Final artifact **`sailfish-pipa-flash`**:
+
+- `u-boot-xiaomi-pipa.img` → `boot_ab`
+- `sfos_rootfs.raw` → `linux`
+
+```bash
+bash flash/flash.sh /path/to/sailfish-pipa-flash
+```
+
+Triggers: push to `main`/`master` (paths above) or **Actions → workflow_dispatch**.
