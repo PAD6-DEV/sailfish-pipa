@@ -135,6 +135,10 @@ jobs:
               zypper -n in createrepo_c rpm-build tar gzip || true
               ./bootstrap/build-rpms.sh
               test "$(find repo/adaptation -name "*.rpm" | wc -l)" -ge 3
+              createrepo_c repo/adaptation || createrepo repo/adaptation
+              # Same-run mic: use freshly built local adaptation (Pages may lag)
+              sed -i "s|https://pad6-dev.github.io/sailfish-pipa/adaptation/|file:///parentroot/home/ayman/sailfish-pipa/repo/adaptation|" \
+                image-ci/pipa/Jolla-@RELEASE@-pipa-@ARCH@.ks
               cd image-ci
               source root.env
               source pipa/pipa.env

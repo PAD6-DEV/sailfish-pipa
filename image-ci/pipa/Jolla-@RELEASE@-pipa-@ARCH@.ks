@@ -10,7 +10,7 @@ timezone --utc UTC
 
 part / --size 500 --ondisk sda --fstype=ext4
 
-repo --name=adaptation-xiaomi-pipa-@RELEASE@ --baseurl=file:///parentroot/home/ayman/sailfish-pipa/repo/adaptation
+repo --name=adaptation-xiaomi-pipa-@RELEASE@ --baseurl=https://pad6-dev.github.io/sailfish-pipa/adaptation/
 repo --name=adaptation-community-common-@RELEASE@ --baseurl=https://repo.sailfishos.org/obs/nemo:/devel:/hw:/common/sailfish_latest_@ARCH@/
 repo --name=adaptation-native-common-@RELEASE@ --baseurl=https://repo.sailfishos.org/obs/nemo:/devel:/hw:/native-common/sailfish_latest_@ARCH@/
 repo --name=sailfishos-chum-@RELEASEMAJMIN@ --baseurl=http://repo.sailfishos.org/obs/sailfishos:/chum/@RELEASEMAJMIN@_@ARCH@/

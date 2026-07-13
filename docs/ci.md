@@ -23,3 +23,13 @@ bash flash/flash.sh /path/to/sailfish-pipa-flash
 ```
 
 Triggers: push to `main`/`master` (paths above) or **Actions → workflow_dispatch**.
+
+## Adaptation RPM GitHub Pages
+
+Published feed (enable Pages → GitHub Actions in repo Settings if needed):
+
+`https://pad6-dev.github.io/sailfish-pipa/adaptation/`
+
+Workflow: `.github/workflows/publish-adaptation-pages.yml`
+
+Kickstart and on-device SSU use that URL. Image mic CI still overlays a local `file://` copy for the same run so packages are available before Pages catches up.
