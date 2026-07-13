@@ -75,7 +75,7 @@ sb2_install \
   gcc gcc-c++ binutils make \
   pkgconfig flex bison \
   libdrm-devel zlib-devel expat-devel libffi-devel \
-  wayland-devel wayland-protocols-devel libwayland-egl-devel \
+  wayland-devel wayland-protocols-devel \
   python3-base python3-libs python3-setuptools \
   || true
 sb2_install meson ninja python3-mako 2>/dev/null || true
@@ -128,7 +128,7 @@ meson setup \"$BUILD\" \"$MESA_SRC\" \
   --libdir=lib64 \
   --wrap-mode=nofallback \
   -Dbuildtype=release \
-  -Dplatforms=wayland,surfaceless \
+  -Dplatforms=wayland \
   -Degl=enabled \
   -Dgbm=enabled \
   -Dglx=disabled \
