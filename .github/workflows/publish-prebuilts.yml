@@ -1,0 +1,178 @@
+name: Publish prebuilts to GitHub Pages
+
+# Build U-Boot, Mesa, pipa firmware, adaptation RPMs, and mirror the kernel once;
+# publish under https://pad6-dev.github.io/sailfish-pipa/{adaptation,prebuilts}/
+# Enable: Settings → Pages → GitHub Actions. Then run this before the image workflow.
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, main]
+    paths:
+      - "u-boot-pipa/**"
+      - "mesa-pipa/**"
+      - "firmware-pipa/**"
+      - "bootstrap/**"
+      - "droid-config-pipa/**"
+      - "scripts/stage-pages.sh"
+      - "scripts/stage-adaptation-pages.sh"
+      - "scripts/createrepo-local.sh"
+      - ".github/workflows/publish-prebuilts.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: sailfish-pipa-pages
+  cancel-in-progress: true
+
+env:
+  SDK_IMAGE: coderus/sailfishos-platform-sdk-base:4.6.0.13
+  KERNEL_PKG_URL: https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.0.8-21-aarch64.pkg.tar.xz
+  PAGES_BASE: https://pad6-dev.github.io/sailfish-pipa
+
+jobs:
+  build-uboot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          set -eux
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            make bison flex python3 python3-setuptools \
+            swig libssl-dev libgnutls28-dev bc git gzip
+      - name: Build U-Boot
+        run: |
+          set -eux
+          chmod +x u-boot-pipa/build-uboot.sh
+          CROSS_COMPILE=aarch64-linux-gnu- bash u-boot-pipa/build-uboot.sh
+          test -s u-boot-pipa/out/u-boot-xiaomi-pipa.img
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pub-uboot
+          path: u-boot-pipa/out/u-boot-xiaomi-pipa.img
+          if-no-files-found: error
+          retention-days: 7
+
+  build-mesa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross toolchain + meson
+        run: |
+          set -eux
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            meson ninja-build pkg-config python3-mako python3-setuptools \
+            curl rpm2cpio cpio binutils xz-utils flex bison libssl-dev
+      - name: Build Mesa freedreno
+        run: |
+          set -eux
+          chmod +x mesa-pipa/build-mesa-freedreno.sh
+          bash mesa-pipa/build-mesa-freedreno.sh
+          test -s mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
+          tar -tzf mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz | grep -E 'dri/msm_dri\.so$'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pub-mesa
+          path: mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  build-firmware:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack firmware tarball
+        run: |
+          set -eux
+          chmod +x firmware-pipa/build-firmware-tarball.sh
+          bash firmware-pipa/build-firmware-tarball.sh
+          test -s firmware-pipa/out/xiaomi-pipa-firmware.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pub-firmware
+          path: firmware-pipa/out/xiaomi-pipa-firmware.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  build-adaptation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync sparse into bootstrap
+        run: |
+          set -eux
+          rm -rf bootstrap/droid-config-pipa/sparse
+          cp -a droid-config-pipa/sparse bootstrap/droid-config-pipa/sparse
+      - name: Build bootstrap adaptation RPMs
+        run: |
+          set -eux
+          docker pull "$SDK_IMAGE"
+          docker run --rm --privileged \
+            -v "$GITHUB_WORKSPACE:/sailfish-pipa" \
+            -w /sailfish-pipa \
+            "$SDK_IMAGE" \
+            bash -lc '
+              set -eux
+              mkdir -p repo/adaptation
+              zypper -n in createrepo_c rpm-build tar gzip || true
+              ./bootstrap/build-rpms.sh
+              test "$(find repo/adaptation -name "*.rpm" | wc -l)" -ge 3
+              createrepo_c repo/adaptation || createrepo repo/adaptation
+            '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pub-adaptation
+          path: repo/adaptation/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [build-uboot, build-mesa, build-firmware, build-adaptation]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: _arts
+      - name: Assemble prebuilts + adaptation
+        run: |
+          set -eux
+          mkdir -p out/prebuilts repo/adaptation
+          cp -a _arts/pub-adaptation/. repo/adaptation/
+          cp -f _arts/pub-uboot/u-boot-xiaomi-pipa.img out/prebuilts/
+          cp -f _arts/pub-mesa/mesa-freedreno-sfos-aarch64.tar.gz out/prebuilts/
+          cp -f _arts/pub-firmware/xiaomi-pipa-firmware.tar.gz out/prebuilts/
+          wget -q -O "out/prebuilts/$(basename "$KERNEL_PKG_URL")" "$KERNEL_PKG_URL"
+          test -s "out/prebuilts/$(basename "$KERNEL_PKG_URL")"
+          ls -lh out/prebuilts repo/adaptation
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Stage Pages site
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          chmod +x scripts/stage-pages.sh
+          ./scripts/stage-pages.sh
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v5

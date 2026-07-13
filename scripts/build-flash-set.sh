@@ -42,10 +42,14 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 mkdir -p "$OUT"
+MESA_TAR="${MESA_TAR:-$SF/mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz}"
+FW_TAR="${FIRMWARE_TAR:-$SF/firmware-pipa/out/xiaomi-pipa-firmware.tar.gz}"
 bash "$SF/flash/pack-flashables.sh" \
   --rootfs-tbz "$TBZ" \
   --kernel-prebuilt "$SF/kernel-adaptation-pipa/prebuilt" \
   --uboot-img "$UBOOT_IMG" \
+  --mesa-tar "$MESA_TAR" \
+  --firmware-tar "$FW_TAR" \
   --outdir "$OUT" \
   --rootfs-size-mb "${ROOTFS_SIZE_MB:-0}" \
   --target-part "$TARGET_PART"

@@ -32,6 +32,7 @@ LEGACY_UEFI="${LEGACY_UEFI:-0}"
 EXISTING_ROOTFS_RAW=""
 MTDEV_SO="${MTDEV_SO:-}"
 MESA_TAR="${MESA_TAR:-$REPO_ROOT/mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz}"
+FIRMWARE_TAR="${FIRMWARE_TAR:-$REPO_ROOT/firmware-pipa/out/xiaomi-pipa-firmware.tar.gz}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -44,6 +45,7 @@ while [ $# -gt 0 ]; do
     --target-part) TARGET_PART="$2"; shift 2 ;;
     --mtdev-so) MTDEV_SO="$2"; shift 2 ;;
     --mesa-tar) MESA_TAR="$2"; shift 2 ;;
+    --firmware-tar) FIRMWARE_TAR="$2"; shift 2 ;;
     *) echo "Unknown arg: $1" >&2; exit 1 ;;
   esac
 done
@@ -122,13 +124,22 @@ EOF
 
 inject_bringup_fixes() {
   local dest="$1"
-  # Freedreno Mesa overlay (CI artifact) — replaces soft/panfrost-only dri
+  # Freedreno Mesa overlay (Pages prebuilt) — replaces soft/panfrost-only dri
   if [ -n "$MESA_TAR" ] && [ -f "$MESA_TAR" ]; then
     echo "Injecting Mesa freedreno from $MESA_TAR"
     tar -C "$dest" -xzf "$MESA_TAR"
     test -e "$dest/usr/lib64/dri/msm_dri.so"
   else
     echo "WARN: no Mesa freedreno tarball ($MESA_TAR) — GPU accel may be missing" >&2
+  fi
+
+  # Device firmware (pipa-mainline/xiaomi-pipa-firmware)
+  if [ -n "$FIRMWARE_TAR" ] && [ -f "$FIRMWARE_TAR" ]; then
+    echo "Injecting pipa firmware from $FIRMWARE_TAR"
+    tar -C "$dest" -xzf "$FIRMWARE_TAR"
+    test -e "$dest/usr/lib/firmware/qcom/sm8250/xiaomi/pipa/a650_zap.mbn"
+  else
+    echo "WARN: no firmware tarball ($FIRMWARE_TAR) — GPU/modem may fail" >&2
   fi
 
   # libmtdev for qt eglfs (packaged via kickstart; optional safety inject)

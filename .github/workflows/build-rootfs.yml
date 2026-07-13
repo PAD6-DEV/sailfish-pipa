@@ -1,6 +1,7 @@
-name: Build Sailfish pipa image (U-Boot + Mesa + rootfs)
+name: Build Sailfish pipa image (rootfs + pack)
 
-# All heavy builds run here — sequential: uboot → mesa → rootfs → pack.
+# Downloads U-Boot / Mesa / firmware / kernel from GitHub Pages prebuilts
+# (publish-prebuilts.yml). Does not rebuild those on every image run.
 on:
   workflow_dispatch:
   push:
@@ -12,8 +13,6 @@ on:
       - "bootstrap/**"
       - "image-ci/**"
       - "flash/**"
-      - "u-boot-pipa/**"
-      - "mesa-pipa/**"
       - "scripts/**"
       - ".github/workflows/build-rootfs.yml"
 
@@ -27,77 +26,14 @@ concurrency:
 
 env:
   SDK_IMAGE: coderus/sailfishos-platform-sdk-base:4.6.0.13
-  KERNEL_PKG_URL: https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.0.8-21-aarch64.pkg.tar.xz
+  PREBUILTS_BASE: https://pad6-dev.github.io/sailfish-pipa/prebuilts
+  UBOOT_URL: https://pad6-dev.github.io/sailfish-pipa/prebuilts/u-boot-xiaomi-pipa.img
+  MESA_URL: https://pad6-dev.github.io/sailfish-pipa/prebuilts/mesa-freedreno-sfos-aarch64.tar.gz
+  FIRMWARE_URL: https://pad6-dev.github.io/sailfish-pipa/prebuilts/xiaomi-pipa-firmware.tar.gz
+  KERNEL_URL: https://pad6-dev.github.io/sailfish-pipa/prebuilts/linux-pipa-7.0.8-21-aarch64.pkg.tar.xz
 
 jobs:
-  build-uboot:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install toolchain
-        run: |
-          set -eux
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
-            make bison flex python3 python3-setuptools \
-            swig libssl-dev libgnutls28-dev bc git gzip
-          command -v aarch64-linux-gnu-gcc
-          command -v python3
-
-      - name: Build U-Boot (linux blkmap)
-        run: |
-          set -eux
-          chmod +x u-boot-pipa/build-uboot.sh
-          CROSS_COMPILE=aarch64-linux-gnu- bash u-boot-pipa/build-uboot.sh
-          test -s u-boot-pipa/out/u-boot-xiaomi-pipa.img
-
-      - name: Upload U-Boot
-        uses: actions/upload-artifact@v4
-        with:
-          name: u-boot-xiaomi-pipa
-          path: u-boot-pipa/out/u-boot-xiaomi-pipa.img
-          if-no-files-found: error
-          retention-days: 30
-
-  build-mesa:
-    needs: [build-uboot]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 180
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install cross toolchain + meson
-        run: |
-          set -eux
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu \
-            meson ninja-build pkg-config python3-mako python3-setuptools \
-            curl rpm2cpio cpio binutils xz-utils flex bison libssl-dev
-
-      - name: Build Mesa freedreno (SFOS glibc 2.30 sysroot)
-        run: |
-          set -eux
-          chmod +x mesa-pipa/build-mesa-freedreno.sh
-          bash mesa-pipa/build-mesa-freedreno.sh
-          test -s mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
-          tar -tzf mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz | grep -E 'dri/msm_dri\.so$'
-
-      - name: Upload Mesa
-        uses: actions/upload-artifact@v4
-        with:
-          name: mesa-freedreno-sfos
-          path: mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
-          if-no-files-found: error
-          retention-days: 30
-
   build-rootfs:
-    needs: [build-mesa]
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -158,25 +94,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download U-Boot
-        uses: actions/download-artifact@v4
-        with:
-          name: u-boot-xiaomi-pipa
-          path: u-boot-pipa/out
-
-      - name: Download Mesa freedreno
-        uses: actions/download-artifact@v4
-        with:
-          name: mesa-freedreno-sfos
-          path: mesa-pipa/out
-
       - name: Download rootfs tarball
         uses: actions/download-artifact@v4
         with:
           name: sailfish-pipa-rootfs-tbz
           path: artifacts-rootfs
 
-      - name: Install pack tools + stage kernel
+      - name: Fetch Pages prebuilts + stage kernel
         run: |
           set -eux
           sudo apt-get update -qq
@@ -184,14 +108,23 @@ jobs:
           TBZ=$(find artifacts-rootfs -name 'sfe-pipa-*.tar.bz2' | head -1)
           test -s "$TBZ"
           echo "TBZ=$TBZ" >> "$GITHUB_ENV"
+          mkdir -p u-boot-pipa/out mesa-pipa/out firmware-pipa/out /tmp/kernel-pkg
+          wget -q --show-progress -O u-boot-pipa/out/u-boot-xiaomi-pipa.img "$UBOOT_URL" \
+            || { echo "::error::Missing U-Boot on Pages. Run 'Publish prebuilts' first ($UBOOT_URL)"; exit 1; }
+          wget -q --show-progress -O mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz "$MESA_URL" \
+            || { echo "::error::Missing Mesa on Pages. Run 'Publish prebuilts' first ($MESA_URL)"; exit 1; }
+          wget -q --show-progress -O firmware-pipa/out/xiaomi-pipa-firmware.tar.gz "$FIRMWARE_URL" \
+            || { echo "::error::Missing firmware on Pages. Run 'Publish prebuilts' first ($FIRMWARE_URL)"; exit 1; }
+          wget -q --show-progress -O /tmp/kernel-pkg/linux-pipa.pkg.tar.xz "$KERNEL_URL" \
+            || { echo "::error::Missing kernel on Pages. Run 'Publish prebuilts' first ($KERNEL_URL)"; exit 1; }
+          test -s u-boot-pipa/out/u-boot-xiaomi-pipa.img
           test -s mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
-          mkdir -p /tmp/kernel-pkg
-          wget -q -O /tmp/kernel-pkg/linux-pipa.pkg.tar.xz "$KERNEL_PKG_URL"
+          test -s firmware-pipa/out/xiaomi-pipa-firmware.tar.gz
           chmod +x kernel-adaptation-pipa/scripts/stage-prebuilt-kernel.sh
           bash kernel-adaptation-pipa/scripts/stage-prebuilt-kernel.sh /tmp/kernel-pkg/linux-pipa.pkg.tar.xz
           test -s kernel-adaptation-pipa/prebuilt/boot/Image
 
-      - name: Pack flash set (U-Boot + Mesa + linux rootfs)
+      - name: Pack flash set (U-Boot + Mesa + firmware + linux rootfs)
         run: |
           set -eux
           mkdir -p flash/out
@@ -202,6 +135,7 @@ jobs:
             --kernel-prebuilt "$GITHUB_WORKSPACE/kernel-adaptation-pipa/prebuilt" \
             --uboot-img "$GITHUB_WORKSPACE/u-boot-pipa/out/u-boot-xiaomi-pipa.img" \
             --mesa-tar "$GITHUB_WORKSPACE/mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz" \
+            --firmware-tar "$GITHUB_WORKSPACE/firmware-pipa/out/xiaomi-pipa-firmware.tar.gz" \
             --outdir "$GITHUB_WORKSPACE/flash/out" \
             --target-part linux
           ls -lh flash/out

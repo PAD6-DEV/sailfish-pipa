@@ -3,6 +3,15 @@ repo/adaptation/repodata/
 kernel-adaptation-pipa/prebuilt/
 image-ci/pipa/sfe-*/
 flash/out/
+u-boot-pipa/src/
+u-boot-pipa/out/
+mesa-pipa/work/
+mesa-pipa/out/
+firmware-pipa/work/
+firmware-pipa/out/
+site/
+out/
 *.tar.bz2
+*.tar.gz
 *.raw
 *.img
