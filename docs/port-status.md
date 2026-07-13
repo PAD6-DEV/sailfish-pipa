@@ -1,23 +1,18 @@
 # Port status — Sailfish OS pipa
 
-## Done (tree)
+Repo: https://github.com/PAD6-DEV/sailfish-pipa
+
+## Done
 
 - [x] Project scaffold (dontbeevil model)
-- [x] `droid-config-pipa` patterns + sparse (eglfs card1, mce gconf, RNDIS, display-on)
-- [x] `kernel-adaptation-pipa` prebuilt packaging
-- [x] `droid-hal-version-pipa`
-- [x] `image-ci` kickstart + GitLab CI stub
-- [x] Flash packer / flash.sh
-- [x] Platform SDK Docker verify script
+- [x] `droid-config-pipa` + bootstrap RPMs for CI
+- [x] `kernel-adaptation-pipa` (placeholder until real Image staged)
+- [x] GitHub Actions mic rootfs on Platform SDK Docker
+- [x] CI artifact ~700MB+ `sailfish-pipa-rootfs`
 
 ## Next on device
 
-- [ ] Build adaptation RPMs in SDK
-- [ ] `mic` rootfs → flash
-- [ ] Lipstick/Silica UI
+- [ ] Flash CI artifact + silicium
+- [ ] Lipstick/Silica + display
 - [ ] Wi-Fi, audio, BT, sensors, camera
-
-## Credentials / network
-
-- USB RNDIS: `172.16.42.1`
-- Developer mode / SSH after first boot (jolla-developer-mode in pattern)
+- [ ] Replace placeholder kernel with pipa-pkgs Image
