@@ -12,12 +12,12 @@ on:
     branches: [master, main]
     paths:
       # Image/mic/pack only — do not overlap publish-prebuilts path filters
-      # (avoids racing Pages before blobs exist).
+      # (avoids racing Pages before blobs exist). Editing this workflow file
+      # itself does not auto-build; use workflow_dispatch or wait for publish.
       - "image-ci/**"
       - "flash/**"
       - "kernel-adaptation-pipa/**"
       - "droid-hal-version-pipa/**"
-      - ".github/workflows/build-rootfs.yml"
 
 permissions:
   contents: read
