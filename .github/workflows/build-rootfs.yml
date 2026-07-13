@@ -1,19 +1,22 @@
 name: Build Sailfish pipa image (rootfs + pack)
 
 # Downloads U-Boot / Mesa / firmware / kernel from GitHub Pages prebuilts
-# (publish-prebuilts.yml). Does not rebuild those on every image run.
+# (publish-prebuilts.yml). Heavy builds stay in the publish workflow only.
 on:
   workflow_dispatch:
+  # After prebuilts land on Pages, pack a flash set automatically.
+  workflow_run:
+    workflows: ["Publish prebuilts to GitHub Pages"]
+    types: [completed]
   push:
     branches: [master, main]
     paths:
-      - "droid-config-pipa/**"
-      - "kernel-adaptation-pipa/**"
-      - "droid-hal-version-pipa/**"
-      - "bootstrap/**"
+      # Image/mic/pack only — do not overlap publish-prebuilts path filters
+      # (avoids racing Pages before blobs exist).
       - "image-ci/**"
       - "flash/**"
-      - "scripts/**"
+      - "kernel-adaptation-pipa/**"
+      - "droid-hal-version-pipa/**"
       - ".github/workflows/build-rootfs.yml"
 
 permissions:
@@ -34,6 +37,7 @@ env:
 
 jobs:
   build-rootfs:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -88,6 +92,7 @@ jobs:
 
   pack-flash-set:
     needs: [build-rootfs]
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
