@@ -25,7 +25,9 @@ if [ "${MESA_IN_SDK:-0}" != 1 ]; then
   need docker
   echo "Pulling $SDK_IMAGE ..."
   docker pull "$SDK_IMAGE"
-  mkdir -p "$OUT" "$WORK"
+  # SDK container user (mersdk) must be able to write into the bind mount.
+  mkdir -p "$OUT/destdir" "$WORK"
+  chmod -R a+rwX "$OUT" "$WORK"
   exec docker run --rm --privileged \
     -e MESA_IN_SDK=1 \
     -e MESA_VER="$MESA_VER" \
