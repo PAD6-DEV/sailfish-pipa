@@ -7,4 +7,4 @@ GitHub Actions workflow builds the Sailfish rootfs the same way as Pine dont_be_
 3. `mic create fs` from `image-ci/pipa/Jolla-@RELEASE@-pipa-@ARCH@.ks`
 4. Upload `sfe-pipa-*.tar.bz2` (+ optional flash raws)
 
-Repo: `thespider2/sailfish-pipa`
+Repo: `PAD6-DEV/sailfish-pipa`
