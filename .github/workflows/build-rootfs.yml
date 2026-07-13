@@ -8,6 +8,7 @@ on:
       - "droid-config-pipa/**"
       - "kernel-adaptation-pipa/**"
       - "droid-hal-version-pipa/**"
+      - "bootstrap/**"
       - "image-ci/**"
       - "flash/**"
       - "scripts/**"
@@ -38,77 +39,42 @@ jobs:
 
       - name: Verify mic in SDK
         run: |
-          docker run --rm "$SDK_IMAGE" bash -lc 'command -v mic; mic --help 2>&1 | head -5 || true'
+          docker run --rm "$SDK_IMAGE" bash -lc 'command -v mic; mic --help 2>&1 | head -5'
 
-      - name: Build adaptation RPMs + mic rootfs in SDK
+      - name: Build bootstrap RPMs + mic rootfs in SDK
         run: |
           set -eux
           docker run --rm --privileged \
             -v "$GITHUB_WORKSPACE:/sailfish-pipa" \
             -v "$GITHUB_WORKSPACE:/parentroot/home/ayman/sailfish-pipa" \
             -w /sailfish-pipa \
-            -e GITHUB_WORKSPACE=/sailfish-pipa \
             "$SDK_IMAGE" \
             bash -lc '
               set -eux
               mkdir -p repo/adaptation
-              command -v mic
-
-              # --- kernel RPM (placeholder Image if missing) ---
-              cd kernel-adaptation-pipa
-              mkdir -p prebuilt/boot
-              if [ ! -f prebuilt/boot/Image ]; then
-                echo "CI placeholder kernel" > prebuilt/boot/Image
-              fi
-              if command -v rpmbuild >/dev/null 2>&1; then
-                mkdir -p "$HOME/rpmbuild"/{SOURCES,SPECS,RPMS,BUILD}
-                tar -C . -czf "$HOME/rpmbuild/SOURCES/kernel-adaptation-pipa-6.14.0.tar.gz" prebuilt || true
-                rpmbuild -bb --define "_topdir $HOME/rpmbuild" rpm/kernel-adaptation-pipa.spec \
-                  || rpmbuild -bb --define "_topdir $HOME/rpmbuild" --target aarch64 rpm/kernel-adaptation-pipa.spec \
-                  || true
-                find "$HOME/rpmbuild/RPMS" -name "*.rpm" -exec cp -v {} /sailfish-pipa/repo/adaptation/ \; || true
-              else
-                echo "rpmbuild not in SDK image"
-              fi
-              cd /sailfish-pipa
-
-              # --- droid-config (best-effort) ---
-              cd droid-config-pipa
-              if command -v mb2 >/dev/null 2>&1; then
-                mb2 build || true
-              elif command -v rpmbuild >/dev/null 2>&1; then
-                rpmbuild -bb --define "_topdir $HOME/rpmbuild" rpm/droid-config-pipa.spec || true
-                find "$HOME/rpmbuild/RPMS" -name "droid-config*.rpm" -exec cp -v {} /sailfish-pipa/repo/adaptation/ \; || true
-              fi
-              cd /sailfish-pipa
-
-              # --- createrepo ---
-              if ! command -v createrepo_c >/dev/null 2>&1 && ! command -v createrepo >/dev/null 2>&1; then
-                zypper -n in createrepo_c || zypper -n in createrepo || true
-              fi
-              createrepo_c repo/adaptation || createrepo repo/adaptation || mkdir -p repo/adaptation/repodata
-              ls -la repo/adaptation || true
-
-              # --- mic ---
+              # Bootstrap RPMs (no mb2 target required)
+              zypper -n in createrepo_c rpm-build tar gzip || true
+              ./bootstrap/build-rpms.sh
+              test "$(find repo/adaptation -name "*.rpm" | wc -l)" -ge 3
+              # mic
               cd image-ci
               source root.env
               source pipa/pipa.env
               export WORKING_DIRECTORY=pipa
-              test -e /parentroot/home/ayman/sailfish-pipa/repo/adaptation
               ./run-mic.sh
             '
 
-      - name: Pack flashable rootfs raw (optional)
+      - name: Pack flashable rootfs raw
         if: success()
         run: |
           set -eux
           TBZ=$(ls -1 image-ci/pipa/sfe-pipa-*/sfe-pipa-*.tar.bz2 | head -1)
+          test -s "$TBZ"
           mkdir -p flash/out
           sudo apt-get update -qq
           sudo apt-get install -y -qq e2fsprogs rsync
-          sudo bash flash/pack-rootfs.sh "$TBZ" flash/out || true
-          ls -lh image-ci/pipa/sfe-pipa-* || true
-          ls -lh flash/out || true
+          sudo bash flash/pack-rootfs.sh "$TBZ" flash/out
+          ls -lh "$TBZ" flash/out
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -121,5 +87,5 @@ jobs:
             image-ci/pipa/sfe-*/**/*.urls
             flash/out/**
             repo/adaptation/*.rpm
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30

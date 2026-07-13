@@ -1,0 +1,7 @@
+/system/osso/dsm/display/display_never_blank=1
+/system/osso/dsm/display/display_blank_timeout=86400
+/system/osso/dsm/display/display_dim_timeout=86400
+/system/osso/dsm/display/display_brightness=80
+/system/osso/dsm/display/inhibit_blank_mode=3
+/system/osso/dsm/locks/touchscreen_keypad_autolock_enabled=false
+/system/osso/dsm/locks/tklock_blank_disable=1

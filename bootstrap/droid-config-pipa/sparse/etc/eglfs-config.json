@@ -1,0 +1,7 @@
+{
+    "device": "/dev/dri/card1",
+    "hwcursor": false,
+    "outputs": [
+        { "name": "DSI-1", "mode": "1800x2880", "primary": true }
+    ]
+}

@@ -1,10 +1,12 @@
 # CI build
 
-GitHub Actions workflow builds the Sailfish rootfs the same way as Pine dont_be_evil-ci:
+Repo: https://github.com/PAD6-DEV/sailfish-pipa
 
-1. Pull Platform SDK container
-2. Build adaptation RPMs into `repo/adaptation`
-3. `mic create fs` from `image-ci/pipa/Jolla-@RELEASE@-pipa-@ARCH@.ks`
-4. Upload `sfe-pipa-*.tar.bz2` (+ optional flash raws)
+GitHub Actions builds a Sailfish rootfs like [dont_be_evil-ci](https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/):
 
-Repo: `PAD6-DEV/sailfish-pipa`
+1. `coderus/sailfishos-platform-sdk-base:4.6.0.13` via Docker on `ubuntu-24.04`
+2. Bootstrap RPMs (`bootstrap/`) → `repo/adaptation`
+3. `mic create fs` from `image-ci/pipa/` kickstart
+4. Artifact `sailfish-pipa-rootfs` (tarball + optional flash raws)
+
+Workflow: `.github/workflows/build-rootfs.yml`
