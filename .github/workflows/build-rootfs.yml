@@ -1,0 +1,141 @@
+name: Build Sailfish pipa rootfs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, main]
+    paths:
+      - "droid-config-pipa/**"
+      - "kernel-adaptation-pipa/**"
+      - "droid-hal-version-pipa/**"
+      - "image-ci/**"
+      - "flash/**"
+      - "scripts/**"
+      - ".github/workflows/build-rootfs.yml"
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: sailfish-pipa-rootfs
+  cancel-in-progress: true
+
+jobs:
+  build-adaptation-and-rootfs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    # Same Platform SDK base image as dont_be_evil-ci
+    container:
+      image: coderus/sailfishos-platform-sdk-base:4.6.0.13
+      options: --privileged
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare workspace mounts expected by kickstart
+        run: |
+          set -eux
+          mkdir -p /parentroot/home/ayman
+          ln -sfn "$GITHUB_WORKSPACE" /parentroot/home/ayman/sailfish-pipa
+          ln -sfn "$GITHUB_WORKSPACE" /sailfish-pipa
+          mkdir -p repo/adaptation
+          # mic needs loop / kmod inside SDK
+          command -v mic
+          mic --help >/dev/null 2>&1 || mic --version || true
+
+      - name: Build kernel-adaptation-pipa RPM (prebuilt/placeholder)
+        run: |
+          set -eux
+          cd kernel-adaptation-pipa
+          mkdir -p prebuilt/boot
+          if [ ! -f prebuilt/boot/Image ]; then
+            echo "CI placeholder kernel" > prebuilt/boot/Image
+          fi
+          # Simple rpmbuild if available in SDK image
+          if command -v rpmbuild >/dev/null 2>&1; then
+            mkdir -p "$HOME/rpmbuild/SOURCES" "$HOME/rpmbuild/SPECS"
+            # Bundle sources as tar expected by some specs — our spec packs from prebuilt in %prep
+            tar -C . -czf "$HOME/rpmbuild/SOURCES/kernel-adaptation-pipa-6.14.0.tar.gz" \
+              rpm prebuilt scripts README.md || \
+              tar -C . -czf "$HOME/rpmbuild/SOURCES/kernel-adaptation-pipa-6.14.0.tar.gz" prebuilt
+            cp rpm/kernel-adaptation-pipa.spec "$HOME/rpmbuild/SPECS/"
+            # Adjust Source if needed — rebuild with --define
+            rpmbuild -bb \
+              --define "_topdir $HOME/rpmbuild" \
+              --define "_sourcedir $HOME/rpmbuild/SOURCES" \
+              --target aarch64-linux \
+              rpm/kernel-adaptation-pipa.spec || \
+            rpmbuild -bb --define "_topdir $HOME/rpmbuild" rpm/kernel-adaptation-pipa.spec || true
+            find "$HOME/rpmbuild/RPMS" -name '*.rpm' -exec cp -v {} "$GITHUB_WORKSPACE/repo/adaptation/" \; || true
+          else
+            echo "rpmbuild missing in SDK image — skipping kernel RPM for now"
+          fi
+
+      - name: Build droid-config-pipa (best-effort)
+        run: |
+          set -eux
+          cd droid-config-pipa
+          if command -v mb2 >/dev/null 2>&1; then
+            mb2 -t SailfishOS-5.0.0.62-aarch64 build || mb2 build || true
+          elif command -v rpmbuild >/dev/null 2>&1; then
+            # droid-config normally needs the hybris/native include machinery; attempt
+            rpmbuild -bb --define "_topdir $HOME/rpmbuild" rpm/droid-config-pipa.spec || true
+            find "$HOME/rpmbuild/RPMS" -name 'droid-config*.rpm' -exec cp -v {} "$GITHUB_WORKSPACE/repo/adaptation/" \; || true
+          else
+            echo "No mb2/rpmbuild — adaptation RPMs must come from OBS later"
+          fi
+
+      - name: Build local adaptation createrepo
+        run: |
+          set -eux
+          mkdir -p repo/adaptation
+          if command -v createrepo_c >/dev/null 2>&1; then
+            createrepo_c repo/adaptation
+          elif command -v createrepo >/dev/null 2>&1; then
+            createrepo repo/adaptation
+          else
+            zypper -n in createrepo_c || zypper -n in createrepo || true
+            createrepo_c repo/adaptation || createrepo repo/adaptation || \
+              mkdir -p repo/adaptation/repodata
+          fi
+          ls -la repo/adaptation || true
+
+      - name: Run mic rootfs build
+        working-directory: image-ci
+        run: |
+          set -eux
+          source root.env
+          source pipa/pipa.env
+          export WORKING_DIRECTORY=pipa
+          # Ensure kickstart file:// path resolves
+          test -e /parentroot/home/ayman/sailfish-pipa/repo/adaptation
+          ./run-mic.sh
+
+      - name: Pack flashable rootfs raw (optional)
+        if: success()
+        run: |
+          set -eux
+          TBZ=$(ls -1 image-ci/pipa/sfe-pipa-*/sfe-pipa-*.tar.bz2 | head -1)
+          mkdir -p flash/out
+          # pack-rootfs needs mkfs.ext4 + mount; may need host tools
+          if command -v mkfs.ext4 >/dev/null 2>&1; then
+            bash flash/pack-rootfs.sh "$TBZ" flash/out || true
+          fi
+          ls -lh image-ci/pipa/sfe-pipa-* || true
+          ls -lh flash/out || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sailfish-pipa-rootfs
+          path: |
+            image-ci/pipa/sfe-*/**/*.tar.bz2
+            image-ci/pipa/sfe-*/**/*.packages
+            image-ci/pipa/sfe-*/**/*.ks
+            image-ci/pipa/sfe-*/**/*.urls
+            flash/out/**
+            repo/adaptation/*.rpm
+          if-no-files-found: warn
+          retention-days: 30

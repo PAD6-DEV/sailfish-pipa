@@ -1,0 +1,12 @@
+[Unit]
+Description=Wake pipa panel via mce / backlight before Lipstick
+After=mce.service
+Before=user@100000.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c 'busctl call com.nokia.mce /com/nokia/mce/request com.nokia.mce.request req_display_state_on 2>/dev/null || true; busctl call com.nokia.mce /com/nokia/mce/request com.nokia.mce.request req_display_blanking_pause 2>/dev/null || true; for d in /sys/class/backlight/*; do echo 0 > "$d/bl_power" 2>/dev/null; echo $(($(cat "$d/max_brightness" 2>/dev/null || echo 255)*95/100)) > "$d/brightness" 2>/dev/null; done; true'
+
+[Install]
+WantedBy=multi-user.target

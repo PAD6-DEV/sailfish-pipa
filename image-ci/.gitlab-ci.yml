@@ -1,0 +1,25 @@
+image: coderus/sailfishos-platform-sdk-base:4.6.0.13
+
+stages:
+  - rootfs
+
+pipa-rootfs:
+  stage: rootfs
+  variables:
+    WORKING_DIRECTORY: pipa
+  before_script:
+    - source root.env
+    - source pipa/pipa.env
+  script:
+    - ./run-mic.sh
+  only:
+    - schedules
+    - push
+    - web
+  artifacts:
+    expire_in: never
+    paths:
+      - "$CI_PROJECT_DIR/pipa/sfe-*/*.ks"
+      - "$CI_PROJECT_DIR/pipa/sfe-*/*.packages"
+      - "$CI_PROJECT_DIR/pipa/sfe-*/*.urls"
+      - "$CI_PROJECT_DIR/pipa/sfe-*/*.tar.bz2"

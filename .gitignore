@@ -1,0 +1,8 @@
+repo/adaptation/*.rpm
+repo/adaptation/repodata/
+kernel-adaptation-pipa/prebuilt/
+image-ci/pipa/sfe-*/
+flash/out/
+*.tar.bz2
+*.raw
+*.img

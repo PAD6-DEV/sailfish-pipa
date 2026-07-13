@@ -1,0 +1,13 @@
+[Unit]
+Description=USB RNDIS gadget for Sailfish pipa SSH
+After=local-fs.target sys-kernel-config.mount
+Wants=sys-kernel-config.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/usb-rndis-gadget.sh
+ExecStop=/bin/bash -c 'echo "" > /sys/kernel/config/usb_gadget/g1/UDC 2>/dev/null || true'
+
+[Install]
+WantedBy=multi-user.target
