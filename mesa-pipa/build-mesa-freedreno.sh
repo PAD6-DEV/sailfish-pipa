@@ -126,7 +126,7 @@ meson setup "$BUILD" "$MESA_SRC" \
   -Dgles2=enabled \
   -Dshared-glapi=enabled \
   -Dllvm=disabled \
-  -Dgallium-drivers=freedreno,softpipe \
+  -Dgallium-drivers=freedreno,swrast \
   -Dvulkan-drivers=[] \
   -Dfreedreno-kmds=msm \
   -Dglvnd=disabled \
