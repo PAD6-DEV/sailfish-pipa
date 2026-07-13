@@ -124,9 +124,10 @@ cpu = 'aarch64'
 endian = 'little'
 
 [built-in options]
-# gnu17: avoid Ubuntu toolchain emitting __isoc23_* against SFOS glibc 2.30.
-# Do not -isystem the SFOS include dir for C++ — that can shadow cross libstdc++.
-c_args = ['--sysroot=${SYSROOT}', '-std=gnu17', '-D_GNU_SOURCE']
+# C must use SFOS headers via -isystem — Ubuntu 24.04 aarch64 libc headers
+# rewrite strto* to __isoc23_* which glibc 2.30 lacks.
+# C++ must NOT -isystem SFOS (shadows cross libstdc++ / underlying_type).
+c_args = ['--sysroot=${SYSROOT}', '-isystem${SYSROOT}/usr/include', '-std=gnu17', '-D_GNU_SOURCE', '-U_ISOC23_SOURCE', '-U_ISOC2X_SOURCE']
 cpp_args = ['--sysroot=${SYSROOT}', '-std=gnu++17', '-D_GNU_SOURCE']
 c_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64']
 cpp_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64']
