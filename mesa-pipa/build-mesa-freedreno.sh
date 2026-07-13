@@ -81,28 +81,41 @@ sb2_install \
 sb2_install meson ninja python3-mako 2>/dev/null || true
 # wayland bits are required for EGL_WL_bind_wayland_display (lipstick apps)
 sb2_install wayland-devel wayland-protocols-devel 2>/dev/null || true
-# SFOS wayland-devel often omits wayland-egl-backend.pc (needed by Mesa ≥22)
+# SFOS wayland-devel often omits wayland-egl-backend.{pc,h} needed by Mesa ≥22
 sb2_t bash -lc '
 set -euo pipefail
 export PKG_CONFIG_PATH="$HOME/.local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
-mkdir -p "$HOME/.local/lib/pkgconfig"
+mkdir -p "$HOME/.local/lib/pkgconfig" "$HOME/.local/include"
+if [ ! -f /usr/include/wayland-egl-backend.h ] && [ ! -f "$HOME/.local/include/wayland-egl-backend.h" ]; then
+  curl -fL --retry 3 -A "sailfish-pipa-ci" \
+    -o "$HOME/.local/include/wayland-egl-backend.h" \
+    "https://gitlab.freedesktop.org/wayland/wayland/-/raw/1.22.0/src/wayland-egl-backend.h"
+  echo "Fetched wayland-egl-backend.h"
+fi
+# Prefer system include if present; else expose local via CFLAGS/PKG_CONFIG
+INC_DIR=/usr/include
+if [ ! -f /usr/include/wayland-egl-backend.h ]; then
+  INC_DIR=$HOME/.local/include
+  # Also try to install into target (may fail without root)
+  cp -f "$HOME/.local/include/wayland-egl-backend.h" /usr/include/ 2>/dev/null || true
+fi
 if ! pkg-config --exists wayland-egl-backend; then
   cat > "$HOME/.local/lib/pkgconfig/wayland-egl-backend.pc" <<EOF
 prefix=/usr
 exec_prefix=\${prefix}
 libdir=\${prefix}/lib64
-includedir=\${prefix}/include
+includedir=${INC_DIR}
 
 Name: wayland-egl-backend
 Description: Backend wayland-egl interface (stub for SFOS)
 Version: 3
 Cflags: -I\${includedir}
 EOF
-  echo "Created stub wayland-egl-backend.pc"
+  echo "Created stub wayland-egl-backend.pc (includedir=$INC_DIR)"
 fi
 pkg-config --modversion wayland-egl-backend
 pkg-config --cflags wayland-egl-backend
-ls /usr/include/wayland-egl*.h 2>/dev/null || true
+ls /usr/include/wayland-egl*.h "$HOME/.local/include/wayland-egl"*.h 2>/dev/null || true
 '
 if ! sb2_t which meson >/dev/null 2>&1; then
   sb2_install python3-pip 2>/dev/null || true
@@ -145,6 +158,8 @@ sb2_t bash -lc "
 set -euo pipefail
 export PATH=\"\$HOME/.local/bin:/usr/bin:\$PATH\"
 export PKG_CONFIG_PATH=\"\$HOME/.local/lib/pkgconfig:\${PKG_CONFIG_PATH:-}\"
+export C_INCLUDE_PATH=\"\$HOME/.local/include:\${C_INCLUDE_PATH:-}\"
+export CPATH=\"\$HOME/.local/include:\${CPATH:-}\"
 test -d \"$MESA_SRC\"
 rm -rf \"$BUILD\"
 meson setup \"$BUILD\" \"$MESA_SRC\" \
