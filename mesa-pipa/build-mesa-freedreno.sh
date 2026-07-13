@@ -1,91 +1,98 @@
 #!/usr/bin/env bash
-# Cross-build Mesa with gallium freedreno (msm KMD) for SFOS aarch64 (glibc 2.30).
-# Intended to run in GitHub Actions — not as a local bring-up step.
+# Build Mesa (freedreno/msm) for Sailfish OS aarch64 inside the Platform SDK.
+# Uses sb2 target toolchain + sysroot (same glibc as the device) — not Ubuntu cross.
 #
-# Output: $MESA_OUT/mesa-freedreno-sfos-aarch64.tar.gz  (usr/ tree)
+# On the GitHub runner this script docker-wraps itself in
+#   coderus/sailfishos-platform-sdk:$SFOS_SDK_RELEASE
+# Output: $MESA_OUT/mesa-freedreno-sfos-aarch64.tar.gz
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+REPO="$(cd "$ROOT/.." && pwd)"
 OUT="${MESA_OUT:-$ROOT/out}"
 WORK="${MESA_WORK:-$ROOT/work}"
-SYSROOT="${SYSROOT:-$WORK/sysroot}"
 DESTDIR="${DESTDIR:-$OUT/destdir}"
 MESA_VER="${MESA_VER:-24.1.7}"
 JOBS="${JOBS:-$(nproc)}"
+SFOS_SDK_RELEASE="${SFOS_SDK_RELEASE:-5.0.0.43}"
+SDK_IMAGE="${SDK_IMAGE:-coderus/sailfishos-platform-sdk:${SFOS_SDK_RELEASE}}"
+TARGET="${SFOS_TARGET:-SailfishOS-${SFOS_SDK_RELEASE}-aarch64}"
 UA="${UA:-Mozilla/5.0 (compatible; sailfish-pipa-ci)}"
-JOLLA_OSS="https://releases.jolla.com/releases/5.0.0.77/jolla/aarch64/oss/aarch64"
 
-need() { command -v "$1" >/dev/null 2>&1 || { echo "missing $1" >&2; exit 1; }; }
-need aarch64-linux-gnu-gcc
-need meson
-need ninja
-need curl
-need python3
-need tar
+# ---------- host: re-exec inside Platform SDK ----------
+if [ "${MESA_IN_SDK:-0}" != 1 ]; then
+  need() { command -v "$1" >/dev/null 2>&1 || { echo "missing $1" >&2; exit 1; }; }
+  need docker
+  echo "Pulling $SDK_IMAGE ..."
+  docker pull "$SDK_IMAGE"
+  mkdir -p "$OUT" "$WORK"
+  exec docker run --rm --privileged \
+    -e MESA_IN_SDK=1 \
+    -e MESA_VER="$MESA_VER" \
+    -e JOBS="$JOBS" \
+    -e SFOS_SDK_RELEASE="$SFOS_SDK_RELEASE" \
+    -e SFOS_TARGET="$TARGET" \
+    -e MESA_OUT=/sailfish-pipa/mesa-pipa/out \
+    -e MESA_WORK=/sailfish-pipa/mesa-pipa/work \
+    -e DESTDIR=/sailfish-pipa/mesa-pipa/out/destdir \
+    -v "$REPO:/sailfish-pipa" \
+    -w /sailfish-pipa \
+    "$SDK_IMAGE" \
+    bash /sailfish-pipa/mesa-pipa/build-mesa-freedreno.sh
+fi
 
-mkdir -p "$WORK/rpms" "$SYSROOT" "$DESTDIR" "$OUT"
+# ---------- inside Platform SDK ----------
+echo "Building Mesa inside SDK target $TARGET"
 
-fetch_rpm() {
-  local name="$1"
-  local url="$JOLLA_OSS/$name"
-  if [ ! -s "$WORK/rpms/$name" ]; then
-    echo "GET $name"
-    curl -fL --retry 3 -A "$UA" -o "$WORK/rpms/$name" "$url"
-  fi
-  local unpack
-  unpack=$(mktemp -d)
-  if command -v rpm2cpio >/dev/null && command -v cpio >/dev/null; then
-    rpm2cpio "$WORK/rpms/$name" | (cd "$unpack" && cpio -idm --quiet)
+sb2_t() {
+  # Prefer sdk-build (compilers) or fall back to default mode
+  if sb2 -t "$TARGET" -m sdk-build true 2>/dev/null; then
+    sb2 -t "$TARGET" -m sdk-build "$@"
   else
-    bsdtar -C "$unpack" -xf "$WORK/rpms/$name"
+    sb2 -t "$TARGET" "$@"
   fi
-  cp -a "$unpack"/. "$SYSROOT"/
-  rm -rf "$unpack"
 }
 
-# SFOS 5.0.0.77 NEVRs (from pinatab2 .packages + verified devel twins)
-REQUIRED_RPMS=(
-  "glibc-2.30+git12-1.10.3.jolla.aarch64.rpm"
-  "glibc-devel-2.30+git12-1.10.3.jolla.aarch64.rpm"
-  "glibc-headers-2.30+git12-1.10.3.jolla.aarch64.rpm"
-  "libdrm-2.4.122+git1-1.7.1.jolla.aarch64.rpm"
-  "libdrm-devel-2.4.122+git1-1.7.1.jolla.aarch64.rpm"
-  "expat-2.6.1+git1-1.7.3.jolla.aarch64.rpm"
-  "expat-devel-2.6.1+git1-1.7.3.jolla.aarch64.rpm"
-  "zlib-1.3.1+git1-1.9.1.jolla.aarch64.rpm"
-  "zlib-devel-1.3.1+git1-1.9.1.jolla.aarch64.rpm"
-  "libffi-3.4.4+git1-1.7.2.jolla.aarch64.rpm"
-  "libffi-devel-3.4.4+git1-1.7.2.jolla.aarch64.rpm"
-  "libgcc-10.3.1-1.8.6.jolla.aarch64.rpm"
-  "libstdc++-10.3.1-1.8.6.jolla.aarch64.rpm"
-)
+sb2_install() {
+  # Install packages into the aarch64 target root
+  if sb2 -t "$TARGET" -m sdk-install -R true 2>/dev/null; then
+    sb2 -t "$TARGET" -m sdk-install -R zypper -n in "$@" || \
+      sb2 -t "$TARGET" -m sdk-install -R zypper -n in --force-resolution "$@"
+  else
+    sb2 -t "$TARGET" -R zypper -n in "$@" || \
+      sb2 -t "$TARGET" -R zypper -n in --force-resolution "$@"
+  fi
+}
 
-echo "Assembling SFOS sysroot in $SYSROOT ..."
-rm -rf "$SYSROOT"
-mkdir -p "$SYSROOT"
-for r in "${REQUIRED_RPMS[@]}"; do
-  fetch_rpm "$r"
-done
+echo "Available sb2 targets:"
+sb2-config -l || true
+sb2 -t "$TARGET" true
 
-mkdir -p "$SYSROOT/usr/lib/pkgconfig" "$SYSROOT/usr/lib64/pkgconfig"
-if [ -d "$SYSROOT/usr/lib64/pkgconfig" ]; then
-  cp -an "$SYSROOT/usr/lib64/pkgconfig/." "$SYSROOT/usr/lib/pkgconfig/" 2>/dev/null || true
+echo "Installing build deps into target ..."
+sb2_install \
+  gcc gcc-c++ binutils make \
+  pkgconfig flex bison \
+  libdrm-devel zlib-devel expat-devel libffi-devel \
+  python3-base python3-libs python3-setuptools \
+  || true
+# meson/ninja/mako — try packages, else pip
+sb2_install meson ninja python3-mako 2>/dev/null || true
+if ! sb2_t which meson >/dev/null 2>&1; then
+  sb2_install python3-pip 2>/dev/null || true
+  sb2_t pip3 install --user meson ninja mako || \
+    sb2_t python3 -m pip install --user meson ninja mako
+  export PATH="$(sb2_t bash -lc 'echo $HOME/.local/bin'):$PATH"
 fi
-# Some SFOS headers live under /usr/include; ensure exists
-test -d "$SYSROOT/usr/include"
-test -f "$SYSROOT/usr/include/xf86drm.h" || test -f "$SYSROOT/usr/include/libdrm/xf86drm.h"
-# Link against SFOS libstdc++.so; never use its C++ headers (cross g++ provides those).
-rm -rf "$SYSROOT/usr/include/c++"
 
+mkdir -p "$WORK" "$OUT" "$DESTDIR"
 MESA_SRC="$WORK/mesa-$MESA_VER"
 if [ ! -d "$MESA_SRC" ]; then
-  curl -fL --retry 3 -o "$WORK/mesa-$MESA_VER.tar.xz" \
+  curl -fL --retry 3 -A "$UA" -o "$WORK/mesa-$MESA_VER.tar.xz" \
     "https://archive.mesa3d.org/mesa-${MESA_VER}.tar.xz"
   tar -C "$WORK" -xf "$WORK/mesa-$MESA_VER.tar.xz"
 fi
 
-# Mesa 24.1.x BitmaskEnum uses underlying_type_t; SFOS sysroot include order can
-# leave <type_traits> unresolved. Force the include + C++11 underlying_type form.
+# Portable C++11 form + type_traits (harmless if already present)
 python3 - "$MESA_SRC/src/freedreno/common/freedreno_common.h" <<'PY'
 from pathlib import Path
 import sys
@@ -104,51 +111,19 @@ if "#include <type_traits>" not in text2 and "#ifdef __cplusplus" in text2:
 if text2 != text:
     p.write_text(text2)
     print(f"patched {p}")
-else:
-    print(f"no patch needed for {p}")
 PY
-
-CROSS="$WORK/aarch64-sfos.txt"
-COMPAT_C="$ROOT/isoc23-compat.c"
-COMPAT_O="$WORK/isoc23-compat.o"
-# Provide __isoc23_* for final links (C++ still sees Ubuntu libc headers).
-aarch64-linux-gnu-gcc --sysroot="$SYSROOT" -isystem"$SYSROOT/usr/include" \
-  -std=gnu17 -D_GNU_SOURCE -fPIC -O2 -c -o "$COMPAT_O" "$COMPAT_C"
-
-cat > "$CROSS" <<EOF
-[binaries]
-c = 'aarch64-linux-gnu-gcc'
-cpp = 'aarch64-linux-gnu-g++'
-ar = 'aarch64-linux-gnu-ar'
-strip = 'aarch64-linux-gnu-strip'
-pkg-config = 'pkg-config'
-
-[host_machine]
-system = 'linux'
-cpu_family = 'aarch64'
-cpu = 'aarch64'
-endian = 'little'
-
-[built-in options]
-# Prefer SFOS C headers; C++ uses cross libstdc++. Shim resolves leftover __isoc23_*.
-c_args = ['--sysroot=${SYSROOT}', '-isystem${SYSROOT}/usr/include', '-std=gnu17', '-D_GNU_SOURCE', '-U_ISOC23_SOURCE', '-U_ISOC2X_SOURCE']
-cpp_args = ['--sysroot=${SYSROOT}', '-std=gnu++17', '-D_GNU_SOURCE']
-c_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64', '${COMPAT_O}']
-cpp_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64', '${COMPAT_O}']
-EOF
-
-export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
-export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib64/pkgconfig:$SYSROOT/usr/lib/pkgconfig"
-export PKG_CONFIG_PATH="$PKG_CONFIG_LIBDIR"
-export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
-export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
 
 BUILD="$WORK/build"
 rm -rf "$BUILD"
-# No meson wraps/subprojects (libarchive wrap pulls C23 symbols missing on SFOS glibc).
-# Mesa 24+: drm/surfaceless are not -Dplatforms choices; GBM+EGL provide DRM/eglfs.
-meson setup "$BUILD" "$MESA_SRC" \
-  --cross-file "$CROSS" \
+
+# Host meson configures; use sb2 compilers as cross when meson runs in sdk-build.
+# Prefer a native configuration *inside* sb2 so headers/libs are the SFOS root.
+sb2_t bash -lc "
+set -euo pipefail
+export PATH=\"\$HOME/.local/bin:/usr/bin:\$PATH\"
+cd \"$MESA_SRC\"
+rm -rf \"$BUILD\"
+meson setup \"$BUILD\" \"$MESA_SRC\" \
   --prefix=/usr \
   --libdir=lib64 \
   --wrap-mode=nofallback \
@@ -162,6 +137,7 @@ meson setup "$BUILD" "$MESA_SRC" \
   -Dshared-glapi=enabled \
   -Dllvm=disabled \
   -Dgallium-drivers=freedreno,swrast \
+  -Dgallium-xa=disabled \
   -Dvulkan-drivers=[] \
   -Dfreedreno-kmds=msm \
   -Dglvnd=disabled \
@@ -172,10 +148,10 @@ meson setup "$BUILD" "$MESA_SRC" \
   -Dbuild-tests=false \
   -Dtools=[] \
   -Dxmlconfig=disabled
-
-meson compile -C "$BUILD" -j"$JOBS"
-rm -rf "$DESTDIR"
-DESTDIR="$DESTDIR" meson install -C "$BUILD"
+meson compile -C \"$BUILD\" -j\"$JOBS\"
+rm -rf \"$DESTDIR\"
+DESTDIR=\"$DESTDIR\" meson install -C \"$BUILD\"
+"
 
 GALLIUM=$(find "$DESTDIR/usr/lib64" -name 'libgallium*.so' | head -1 || true)
 mkdir -p "$DESTDIR/usr/lib64/dri"
@@ -186,18 +162,21 @@ if [ -n "$GALLIUM" ]; then
   ln -sfn "../$base" "$DESTDIR/usr/lib64/dri/swrast_dri.so"
 fi
 
+# Require symbols ≤ GLIBC_2.30 (SFOS 5.0)
 echo "Checking GLIBC deps (must be <= 2.30) ..."
 max_ok=1
 while IFS= read -r -d '' f; do
   vers=$(objdump -T "$f" 2>/dev/null | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -1 || true)
   echo "  $(basename "$f"): ${vers:-none}"
-  case "$vers" in
-    GLIBC_2.3[1-9]*|GLIBC_2.[4-9]*|GLIBC_2.[1-9][0-9]*)
-      echo "ERROR: $f needs $vers (> 2.30)" >&2
-      max_ok=0
-      ;;
-  esac
-done < <(find "$DESTDIR/usr/lib64" -type f -name '*.so*' -print0)
+  [ -n "$vers" ] || continue
+  ver_num="${vers#GLIBC_}"
+  # sort -V: if the highest of (ver_num, 2.30) is not 2.30, then ver > 2.30
+  highest=$(printf '%s\n%s\n' "$ver_num" "2.30" | sort -V | tail -1)
+  if [ "$highest" != "2.30" ]; then
+    echo "ERROR: $f needs $vers (> 2.30)" >&2
+    max_ok=0
+  fi
+done < <(find "$DESTDIR/usr/lib64" -type f \( -name '*.so' -o -name '*.so.*' \) ! -type l -print0)
 
 [ "$max_ok" = 1 ] || exit 1
 test -e "$DESTDIR/usr/lib64/dri/msm_dri.so"
@@ -206,4 +185,4 @@ test -e "$DESTDIR/usr/lib64/libEGL.so.1" -o -e "$DESTDIR/usr/lib64/libEGL.so.1.0
 TAR="$OUT/mesa-freedreno-sfos-aarch64.tar.gz"
 tar -C "$DESTDIR" -czf "$TAR" usr
 ls -lh "$TAR"
-echo "OK: $TAR"
+echo "OK: $TAR (built via $TARGET)"
