@@ -109,6 +109,12 @@ else:
 PY
 
 CROSS="$WORK/aarch64-sfos.txt"
+COMPAT_C="$ROOT/isoc23-compat.c"
+COMPAT_O="$WORK/isoc23-compat.o"
+# Provide __isoc23_* for final links (C++ still sees Ubuntu libc headers).
+aarch64-linux-gnu-gcc --sysroot="$SYSROOT" -isystem"$SYSROOT/usr/include" \
+  -std=gnu17 -D_GNU_SOURCE -fPIC -O2 -c -o "$COMPAT_O" "$COMPAT_C"
+
 cat > "$CROSS" <<EOF
 [binaries]
 c = 'aarch64-linux-gnu-gcc'
@@ -124,13 +130,11 @@ cpu = 'aarch64'
 endian = 'little'
 
 [built-in options]
-# C must use SFOS headers via -isystem — Ubuntu 24.04 aarch64 libc headers
-# rewrite strto* to __isoc23_* which glibc 2.30 lacks.
-# C++ must NOT -isystem SFOS (shadows cross libstdc++ / underlying_type).
+# Prefer SFOS C headers; C++ uses cross libstdc++. Shim resolves leftover __isoc23_*.
 c_args = ['--sysroot=${SYSROOT}', '-isystem${SYSROOT}/usr/include', '-std=gnu17', '-D_GNU_SOURCE', '-U_ISOC23_SOURCE', '-U_ISOC2X_SOURCE']
 cpp_args = ['--sysroot=${SYSROOT}', '-std=gnu++17', '-D_GNU_SOURCE']
-c_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64']
-cpp_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64']
+c_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64', '${COMPAT_O}']
+cpp_link_args = ['--sysroot=${SYSROOT}', '-L${SYSROOT}/usr/lib64', '-L${SYSROOT}/lib64', '-Wl,-rpath-link,${SYSROOT}/usr/lib64', '${COMPAT_O}']
 EOF
 
 export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
