@@ -147,7 +147,20 @@ jobs:
         with:
           name: pub-firmware
           path: firmware-pipa/out
+      - name: Cache pipa-qcom-userspace RPM
+        id: cache-qcom
+        uses: actions/cache@v4
+        with:
+          path: pkgs/pipa-qcom-userspace/out
+          key: pipa-qcom-${{ hashFiles('pkgs/pipa-qcom-userspace/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
+      - name: Cache pipa-hexagonrpc RPM
+        id: cache-hex
+        uses: actions/cache@v4
+        with:
+          path: pkgs/pipa-hexagonrpc/out
+          key: pipa-hex-${{ hashFiles('pkgs/pipa-hexagonrpc/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
       - name: Build pipa-qcom-userspace (SFOS SDK sb2)
+        if: steps.cache-qcom.outputs.cache-hit != 'true'
         run: |
           set -eux
           chmod +x pkgs/pipa-qcom-userspace/build-in-sdk.sh
@@ -155,6 +168,7 @@ jobs:
             bash pkgs/pipa-qcom-userspace/build-in-sdk.sh
           test -n "$(find pkgs/pipa-qcom-userspace/out -name 'pipa-qcom-userspace*.rpm')"
       - name: Build pipa-hexagonrpc (SFOS SDK sb2)
+        if: steps.cache-hex.outputs.cache-hit != 'true'
         run: |
           set -eux
           chmod +x pkgs/pipa-hexagonrpc/build-in-sdk.sh
@@ -169,6 +183,12 @@ jobs:
           sudo apt-get install -y -qq rpm
           bash pkgs/firmware-pipa/pack-rpm.sh
           test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
+      - name: Verify cached/built pkgs
+        run: |
+          set -eux
+          test -n "$(find pkgs/pipa-qcom-userspace/out -name 'pipa-qcom-userspace*.rpm')"
+          test -n "$(find pkgs/pipa-hexagonrpc/out -name 'pipa-hexagonrpc*.rpm')"
+          ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/firmware-pipa/out
       - uses: actions/upload-artifact@v4
         with:
           name: pub-pkgs
