@@ -63,19 +63,17 @@ curl -fL -o "$TGZ" \
 tar -C "$WORK/src" -xzf "$TGZ"
 SRC="$WORK/src/hexagonrpc-${HEX_VER}"
 
-# Modern fastrpc.h for older tagged trees that may lack it / need newer ioctls
-mkdir -p "$SRC/include/linux"
-if [ ! -f "$SRC/include/linux/fastrpc.h" ]; then
-  curl -fL -o "$SRC/include/linux/fastrpc.h" \
-    "https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/fastrpc.h" \
-    || curl -fL -o "$SRC/include/linux/fastrpc.h" \
-      "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/include/uapi/linux/fastrpc.h"
-fi
+# SFOS sysroot lacks <misc/fastrpc.h> (kernel UAPI). Stage vendored header.
+mkdir -p "$HOME/uapi-linux/misc"
+cp -a /sailfish-pipa/pkgs/pipa-hexagonrpc/files/misc/fastrpc.h \
+  "$HOME/uapi-linux/misc/fastrpc.h"
 
 sb2_t bash -lc "
   set -e
   cd $SRC
-  meson setup build --prefix=/usr --libdir=lib64
+  export CFLAGS='-I$HOME/uapi-linux'
+  export CPPFLAGS=\"\$CFLAGS\"
+  meson setup build --prefix=/usr --libdir=lib64 -Dc_args=\"\$CFLAGS\"
   meson compile -C build -j$JOBS
   DESTDIR=$DEST meson install -C build
 "

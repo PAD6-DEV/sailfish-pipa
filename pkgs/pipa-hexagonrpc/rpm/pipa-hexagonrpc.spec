@@ -1,6 +1,6 @@
 Name:           pipa-hexagonrpc
 Version:        0.3.2
-Release:        2
+Release:        3
 Summary:        FastRPC / hexagonrpcd for Xiaomi Pad 6 sensors DSP
 License:        GPL-3.0-or-later
 URL:            https://github.com/linux-msm/hexagonrpc
@@ -24,6 +24,7 @@ hexagonrpcd and libhexagonrpc built for Sailfish OS aarch64 (Xiaomi Pad 6).
 rm -rf %{buildroot}
 mkdir -p %{buildroot}
 cp -a . %{buildroot}/
+rm -rf %{buildroot}/usr/include %{buildroot}/usr/lib64/pkgconfig %{buildroot}/usr/lib/pkgconfig || true
 
 %pre
 getent group fastrpc >/dev/null || groupadd -r fastrpc || :
@@ -46,6 +47,7 @@ systemctl mask hexagonrpcd-adsp-rootpd.service >/dev/null 2>&1 || :
 %defattr(-,root,root,-)
 /usr/bin/hexagonrpcd
 /usr/lib64/libhexagonrpc.so*
+/usr/libexec/hexagonrpc
 /usr/lib/systemd/system/hexagonrpcd-sdsp.service
 /usr/lib/systemd/system/hexagonrpcd-adsp-rootpd.service
 /usr/lib/systemd/system/hexagonrpcd-adsp-sensorspd.service
@@ -53,6 +55,8 @@ systemctl mask hexagonrpcd-adsp-rootpd.service >/dev/null 2>&1 || :
 /usr/lib/udev/rules.d/10-fastrpc.rules
 
 %changelog
+* Tue Jul 14 2026 Porter <porter@local> - 0.3.2-3
+- Vendor misc/fastrpc.h UAPI for SFOS SDK builds
 * Tue Jul 14 2026 Porter <porter@local> - 0.3.2-2
 - Skip host strip for aarch64 binaries
 * Tue Jul 14 2026 Porter <porter@local> - 0.3.2-1
