@@ -113,8 +113,8 @@ sb2_t bash -lc "
   export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux'
   export LDFLAGS='-L$DEST/usr/lib64 -L$DEST/usr/lib'
   cd $WORK/tqftpserv
-  export CPPFLAGS="\$CFLAGS"
-  meson setup build --prefix=/usr --libdir=lib64 -Dc_args="\$CFLAGS"
+  export CPPFLAGS=\"\$CFLAGS\"
+  meson setup build --prefix=/usr --libdir=lib64 -Dc_args=\"\$CFLAGS\"
   meson compile -C build -j$JOBS
   DESTDIR=$DEST meson install -C build
 "
