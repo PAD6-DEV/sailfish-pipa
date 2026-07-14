@@ -1,5 +1,5 @@
 Name:           droid-config-pipa
-Version:        0.1.3
+Version:        0.1.4
 Release:        1
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
@@ -36,6 +36,8 @@ if [ -f sparse/boot/extlinux/extlinux.conf ]; then
 elif [ -f boot/extlinux/extlinux.conf ]; then
   cp -a boot/extlinux/extlinux.conf %{buildroot}/boot/extlinux/
 fi
+# jolla-rnd-device owns usb-moded-args.conf; -r comes from systemd drop-in
+rm -rf %{buildroot}/var/lib/environment/usb-moded
 
 # Do not package directory nodes owned by filesystem (/, /boot, /etc, …)
 # List only payload prefixes so we never conflict on /boot itself.
@@ -48,6 +50,8 @@ fi
 /var
 
 %changelog
+* Tue Jul 14 2026 Porter <porter@local> - 0.1.4-1
+- Drop usb-moded-args.conf (conflicts with jolla-rnd-device; use systemd drop-in)
 * Tue Jul 14 2026 Porter <porter@local> - 0.1.3-1
 - WiFi/connman, UCM, multimedia v4l2src, SSU adaptation feature, QT services
 * Mon Jul 13 2026 Porter <porter@local> - 0.1.2-1
