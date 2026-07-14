@@ -1,5 +1,5 @@
 Name:           droid-config-pipa
-Version:        0.1.4
+Version:        0.1.5
 Release:        1
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
@@ -50,6 +50,9 @@ rm -rf %{buildroot}/var/lib/environment/usb-moded
 /var
 
 %changelog
+* Wed Jul 15 2026 Porter <porter@local> - 0.1.5-1
+- Add ucm.conf, HDMI UCM stub, pipa-fastrpc-perms oneshot
+
 * Tue Jul 14 2026 Porter <porter@local> - 0.1.4-1
 - Drop usb-moded-args.conf (conflicts with jolla-rnd-device; use systemd drop-in)
 * Tue Jul 14 2026 Porter <porter@local> - 0.1.3-1

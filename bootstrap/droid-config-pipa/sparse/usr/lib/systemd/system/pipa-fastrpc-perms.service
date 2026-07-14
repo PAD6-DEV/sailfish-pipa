@@ -1,0 +1,13 @@
+[Unit]
+Description=Fix FastRPC device node ownership for hexagonrpcd
+DefaultDependencies=no
+After=systemd-udevd.service sysinit.target
+Before=hexagonrpcd-sdsp.service pd-mapper.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'for n in /dev/fastrpc-*; do [ -e "$n" ] || continue; chown fastrpc:fastrpc "$n"; chmod 660 "$n"; done'
+
+[Install]
+WantedBy=multi-user.target
