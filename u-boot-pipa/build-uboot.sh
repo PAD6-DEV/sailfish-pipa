@@ -39,6 +39,9 @@ ENV_FILE="$SRC/board/qualcomm/qcom-phone.env"
 
 # Stock qcom-phone.env uses `bootefi bootmgr` (needs an ESP). Sailfish stores
 # Image + extlinux on the GPT "linux" rootfs instead — boot that via blkmap.
+#
+# Do NOT use `bootflow scan … blkmapN`: bootflow treats that as a bootdev name
+# and errors with "cannot find bootdev 'blkmap0'". Use load+booti instead.
 python3 - "$ENV_FILE" <<'PY'
 from pathlib import Path
 import sys
@@ -54,18 +57,17 @@ replacements = {
         "blkmap create root; "
         "blkmap map root 0 ${linux_size} linear scsi 0 ${linux_start}"
     ),
-    # Prefer extlinux on the mapped rootfs; do not require ESP / EFI bootmgr.
     "boot_sfos": (
         "boot_sfos="
         "blkmap get root dev rootdev; "
-        "if bootflow scan -lb blkmap${rootdev}; then true; "
-        "elif load blkmap ${rootdev} ${kernel_addr_r} /boot/Image; then "
+        "echo Loading Sailfish from blkmap ${rootdev}; "
+        "if load blkmap ${rootdev} ${kernel_addr_r} /boot/Image; then "
         "load blkmap ${rootdev} ${fdt_addr_r} /boot/dtbs/qcom/sm8250-xiaomi-pipa.dtb; "
         "setenv bootargs root=LABEL=sfos_root rw rootwait "
         "console=ttyMSM0,115200n8 earlycon ignore_loglevel "
         "clk_ignore_unused pd_ignore_unused cma=128M; "
         "booti ${kernel_addr_r} - ${fdt_addr_r}; "
-        "else echo \"Sailfish: no /boot on linux partition\"; false; fi"
+        "else echo \"Sailfish: no /boot/Image on linux partition\"; false; fi"
     ),
     "bootcmd": "bootcmd=run boot_sfos; pause; run menucmd",
     "bootmenu_0": "bootmenu_0=Boot Sailfish=run boot_sfos; pause",
@@ -81,7 +83,6 @@ for line in lines:
     else:
         out.append(line)
 
-# Ensure keys exist even if upstream env drops them.
 for key, val in replacements.items():
     if key not in seen:
         out.append(val)
