@@ -12,6 +12,7 @@ on:
       - "mesa-pipa/**"
       - "firmware-pipa/**"
       - "bootstrap/**"
+      - "pkgs/**"
       - "droid-config-pipa/**"
       - "scripts/stage-pages.sh"
       - "scripts/stage-adaptation-pages.sh"
@@ -134,8 +135,52 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+
+  build-pkgs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    needs: [build-firmware]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download firmware tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: pub-firmware
+          path: firmware-pipa/out
+      - name: Build pipa-qcom-userspace (SFOS SDK sb2)
+        run: |
+          set -eux
+          chmod +x pkgs/pipa-qcom-userspace/build-in-sdk.sh
+          SFOS_SDK_RELEASE="$SFOS_SDK_RELEASE" SDK_IMAGE="$MESA_SDK_IMAGE" \
+            bash pkgs/pipa-qcom-userspace/build-in-sdk.sh
+          test -n "$(find pkgs/pipa-qcom-userspace/out -name 'pipa-qcom-userspace*.rpm')"
+      - name: Build pipa-hexagonrpc (SFOS SDK sb2)
+        run: |
+          set -eux
+          chmod +x pkgs/pipa-hexagonrpc/build-in-sdk.sh
+          SFOS_SDK_RELEASE="$SFOS_SDK_RELEASE" SDK_IMAGE="$MESA_SDK_IMAGE" \
+            bash pkgs/pipa-hexagonrpc/build-in-sdk.sh
+          test -n "$(find pkgs/pipa-hexagonrpc/out -name 'pipa-hexagonrpc*.rpm')"
+      - name: Pack firmware-pipa RPM
+        run: |
+          set -eux
+          chmod +x pkgs/firmware-pipa/pack-rpm.sh
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rpm
+          bash pkgs/firmware-pipa/pack-rpm.sh
+          test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pub-pkgs
+          path: |
+            pkgs/pipa-qcom-userspace/out/*.rpm
+            pkgs/pipa-hexagonrpc/out/*.rpm
+            pkgs/firmware-pipa/out/*.rpm
+          if-no-files-found: error
+          retention-days: 7
+
   publish:
-    needs: [build-uboot, build-mesa, build-firmware, build-adaptation]
+    needs: [build-uboot, build-mesa, build-firmware, build-adaptation, build-pkgs]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment:
@@ -152,6 +197,10 @@ jobs:
           set -eux
           mkdir -p out/prebuilts repo/adaptation
           cp -a _arts/pub-adaptation/. repo/adaptation/
+          cp -f _arts/pub-pkgs/*.rpm repo/adaptation/ ||             find _arts/pub-pkgs -name '*.rpm' -exec cp -f {} repo/adaptation/ \;
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq createrepo-c || sudo apt-get install -y -qq createrepo
+          createrepo_c repo/adaptation || createrepo repo/adaptation
           cp -f _arts/pub-uboot/u-boot-xiaomi-pipa.img out/prebuilts/
           cp -f _arts/pub-mesa/mesa-freedreno-sfos-aarch64.tar.gz out/prebuilts/
           cp -f _arts/pub-firmware/xiaomi-pipa-firmware.tar.gz out/prebuilts/

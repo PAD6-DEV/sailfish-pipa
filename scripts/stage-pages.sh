@@ -73,7 +73,10 @@ cat > "$SITE/index.html" <<EOF
   <h2>Adaptation RPM repository</h2>
   <p><a href="adaptation/">adaptation/</a></p>
   <pre>ssu ar adaptation-xiaomi-pipa ${PAGES_BASE}/adaptation/
-zypper ref adaptation-xiaomi-pipa</pre>
+zypper ref adaptation-xiaomi-pipa
+zypper in droid-config-pipa pipa-qcom-userspace pipa-hexagonrpc firmware-pipa
+# or pull the full pattern:
+zypper in patterns-sailfish-device-configuration-pipa</pre>
   <h2>Reusable prebuilts</h2>
   <p>Built once by the <strong>Publish prebuilts</strong> workflow; image/pack downloads these instead of rebuilding.</p>
   <ul>

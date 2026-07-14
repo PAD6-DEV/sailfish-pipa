@@ -20,6 +20,18 @@ cp "$BOOT/rpm/patterns-sailfish-device-configuration-pipa.spec" "$HOME/rpmbuild/
 rpmbuild -bb --define "_topdir $HOME/rpmbuild" "$HOME/rpmbuild/SPECS/patterns-sailfish-device-configuration-pipa.spec"
 
 find "$HOME/rpmbuild/RPMS" -name '*.rpm' -exec cp -v {} "$DEST/" \;
+
+# Optional: drop in prebuilt aarch64 / firmware RPMs from pkgs/*/out
+for d in \
+  "$ROOT/pkgs/pipa-qcom-userspace/out" \
+  "$ROOT/pkgs/pipa-hexagonrpc/out" \
+  "$ROOT/pkgs/firmware-pipa/out"
+do
+  if [ -d "$d" ]; then
+    find "$d" -maxdepth 1 -name '*.rpm' -exec cp -v {} "$DEST/" \;
+  fi
+done
+
 if command -v createrepo_c >/dev/null; then
   createrepo_c "$DEST"
 elif command -v createrepo >/dev/null; then

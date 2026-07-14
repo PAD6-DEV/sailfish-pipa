@@ -71,6 +71,36 @@ install_list "$ROOT/nuvolta_firmware.files" basename_to_subdir nuvolta
 install_list "$ROOT/qcom_firmware.files" basename_to_qcom
 install_list "$ROOT/dsp_firmware.files" path_as_is
 
+# Adreno A650 SQE/GMU from linux-firmware (required for MSM DRM GLES; zap alone is not enough)
+mkdir -p "$DEST/usr/lib/firmware/qcom"
+for blob in a650_sqe.fw a650_gmu.bin; do
+  if [ ! -f "$WORK/linux-fw-$blob" ]; then
+    echo "GET linux-firmware qcom/$blob"
+    curl -fL --retry 3 -A "$UA" -o "$WORK/linux-fw-$blob" \
+      "https://gitlab.com/kernel-firmware/linux-firmware/-/raw/main/qcom/$blob"
+  fi
+  install -Dm644 "$WORK/linux-fw-$blob" "$DEST/usr/lib/firmware/qcom/$blob"
+done
+
+# ath11k QCA6390 (WiFi) + QCA Bluetooth from linux-firmware
+mkdir -p "$DEST/usr/lib/firmware/ath11k/QCA6390/hw2.0" "$DEST/usr/lib/firmware/qca"
+for blob in \
+  ath11k/QCA6390/hw2.0/amss.bin \
+  ath11k/QCA6390/hw2.0/board-2.bin \
+  ath11k/QCA6390/hw2.0/m3.bin \
+  qca/htbtfw20.tlv \
+  qca/htnv20.bin
+do
+  base=$(basename "$blob")
+  cache="$WORK/linux-fw-$(echo "$blob" | tr / -)"
+  if [ ! -f "$cache" ]; then
+    echo "GET linux-firmware $blob"
+    curl -fL --retry 3 -A "$UA" -o "$cache" \
+      "https://gitlab.com/kernel-firmware/linux-firmware/-/raw/main/$blob"
+  fi
+  install -Dm644 "$cache" "$DEST/usr/lib/firmware/$blob"
+done
+
 # Symlinks some kernels expect next to qcom/sm8250/...
 mkdir -p "$DEST/usr/lib/firmware/sm8250/xiaomi"
 if [ -d "$DEST/usr/lib/firmware/qcom/sm8250/xiaomi/pipa" ]; then
@@ -80,8 +110,15 @@ if [ -d "$DEST/usr/lib/firmware/qcom/sm8250/xiaomi/pipa" ]; then
       "$DEST/usr/lib/firmware/sm8250/xiaomi/pipa"
 fi
 
+# Also expose under /lib/firmware for the kernel loader when not usr-merged.
+mkdir -p "$DEST/lib"
+ln -sfn ../usr/lib/firmware "$DEST/lib/firmware"
+
 TGZ="$OUT/xiaomi-pipa-firmware.tar.gz"
 tar -C "$DEST" -czf "$TGZ" .
 echo "Wrote $TGZ ($(du -h "$TGZ" | awk '{print $1}'))"
 tar -tzf "$TGZ" | grep -E 'qcom/sm8250/xiaomi/pipa/a650_zap\.mbn$' >/dev/null
-echo "OK: firmware tarball contains a650_zap.mbn"
+tar -tzf "$TGZ" | grep -E 'novatek/nt36532_' >/dev/null
+tar -tzf "$TGZ" | grep -E 'ath11k/QCA6390/hw2.0/amss\.bin$' >/dev/null
+tar -tzf "$TGZ" | grep -E 'qca/htbtfw20\.tlv$' >/dev/null
+echo "OK: firmware tarball contains a650_zap.mbn + novatek + ath11k + qca BT"

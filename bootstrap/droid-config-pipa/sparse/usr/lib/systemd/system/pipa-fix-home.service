@@ -1,0 +1,13 @@
+[Unit]
+Description=Fix defaultuser home ownership for Sailfish UID 100000
+DefaultDependencies=no
+After=local-fs.target
+Before=systemd-user-sessions.service start-user-session.service oneshot-root.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'H=/home/defaultuser; mkdir -p "$H/.config"; if getent passwd defaultuser >/dev/null; then U=$(getent passwd defaultuser | cut -d: -f3); G=$(getent passwd defaultuser | cut -d: -f4); chown -R "$U:$G" "$H" 2>/dev/null || true; chmod 750 "$H" 2>/dev/null || true; for f in .jolla-startupwizard-done .jolla-startupwizard-usersession-done .config/jolla-startupwizard-done .config/jolla-startupwizard-usersession-done; do touch "$H/$f"; chown "$U:$G" "$H/$f" 2>/dev/null || true; done; fi'
+
+[Install]
+WantedBy=multi-user.target

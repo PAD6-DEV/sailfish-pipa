@@ -1,5 +1,5 @@
 Name:           droid-config-pipa
-Version:        0.1.2
+Version:        0.1.3
 Release:        1
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
@@ -8,6 +8,7 @@ Source0:        sparse.tar.gz
 
 Requires:       openssh-server
 Requires:       kmod
+Requires:       usb-moded
 
 %description
 Sparse overlays and services for Xiaomi Pad 6 Sailfish OS port.
@@ -27,7 +28,6 @@ else
   cp -a . %{buildroot}/
   rm -f %{buildroot}/sparse.tar.gz
 fi
-[ -f %{buildroot}/usr/bin/usb-rndis-gadget.sh ] && chmod 755 %{buildroot}/usr/bin/usb-rndis-gadget.sh
 # filesystem owns /boot; only ship contents
 rm -rf %{buildroot}/boot
 mkdir -p %{buildroot}/boot/extlinux
@@ -48,6 +48,8 @@ fi
 /var
 
 %changelog
+* Tue Jul 14 2026 Porter <porter@local> - 0.1.3-1
+- WiFi/connman, UCM, multimedia v4l2src, SSU adaptation feature, QT services
 * Mon Jul 13 2026 Porter <porter@local> - 0.1.2-1
 - Avoid /boot directory conflict with filesystem package
 * Mon Jul 13 2026 Porter <porter@local> - 0.1.1-1

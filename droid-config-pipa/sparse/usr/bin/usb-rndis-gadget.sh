@@ -144,12 +144,26 @@ ip addr add "${LOCAL_IP}/24" dev "$USB_IFACE" 2>/dev/null \
   || ifconfig "$USB_IFACE" "$LOCAL_IP" netmask 255.255.255.0 up || true
 force_device_role
 
-# Ensure IP stays up + sshd is reachable (never block)
+# Ensure IP stays up; start sshd directly (never systemctl — can deadlock boot)
 /usr/libexec/pipa-usb-debug-enable.sh 2>/dev/null || true
-systemctl restart sshd.service 2>/dev/null || /usr/sbin/sshd 2>/dev/null || true
+if ! pidof sshd >/dev/null 2>&1; then
+  /usr/sbin/sshd 2>/dev/null || /usr/bin/sshd 2>/dev/null || true
+fi
 # Re-assert address in case connman stole the iface
 ip addr add "${LOCAL_IP}/24" dev "$USB_IFACE" 2>/dev/null || true
 ip link set "$USB_IFACE" up || true
+
+# Host can ARP but not SSH/ping unless INPUT allows usb0 (connman/iptables).
+iptables -I INPUT -i "$USB_IFACE" -j ACCEPT 2>/dev/null || true
+iptables -I INPUT -s 172.16.42.0/24 -j ACCEPT 2>/dev/null || true
+iptables -I OUTPUT -o "$USB_IFACE" -j ACCEPT 2>/dev/null || true
+ip6tables -I INPUT -i "$USB_IFACE" -j ACCEPT 2>/dev/null || true
+for f in /proc/sys/net/ipv4/conf/"$USB_IFACE"/rp_filter \
+         /proc/sys/net/ipv4/conf/all/rp_filter; do
+  [ -e "$f" ] && echo 0 > "$f" 2>/dev/null || true
+done
+# Keep connman from tearing down the static address
+connmanctl disable ethernet 2>/dev/null || true
 
 echo "RNDIS ready on $USB_IFACE ($LOCAL_IP) UDC=$UDC — ssh root@${LOCAL_IP} / defaultuser (1234)"
 ip addr show "$USB_IFACE" 2>&1 || true

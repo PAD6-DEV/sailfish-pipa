@@ -1,0 +1,9 @@
+[Unit]
+Description=Unblock WiFi/BT rfkill on pipa
+After=systemd-modules-load.service
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/rfkill unblock all
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

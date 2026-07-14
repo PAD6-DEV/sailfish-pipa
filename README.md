@@ -23,3 +23,16 @@ bash flash/flash.sh /path/to/sailfish-pipa-flash
 See [docs/ci.md](docs/ci.md) and [flash/README.md](flash/README.md).
 
 Default SFOS release: **5.0.0.77**.
+
+
+## Adaptation zypper repository
+
+After flashing, enable the pipa adaptation feed (GitHub Pages):
+
+```bash
+ssu ar adaptation-xiaomi-pipa https://pad6-dev.github.io/sailfish-pipa/adaptation/
+zypper ref adaptation-xiaomi-pipa
+zypper in droid-config-pipa pipa-qcom-userspace pipa-hexagonrpc firmware-pipa
+```
+
+Package sources and build scripts live under [`pkgs/`](pkgs/README.md).
