@@ -62,7 +62,7 @@ mkdir -p "$DEST" "$OUT" "$HOST_OUT"
 
 sb2 -t "$TARGET" true
 sb2_install gcc make binutils pkgconfig meson ninja git xz-devel systemd-devel \
-  kernel-headers || true
+  kernel-headers libzstd-devel || true
 
 # SFOS sysroot often lacks linux/qrtr.h — stage vendored UAPI into sb2-visible HOME.
 mkdir -p "$HOME/uapi-linux/linux"
