@@ -191,7 +191,7 @@ mkdir -p "$OUT/destdir-wrap/destdir"
 cp -a "$DEST"/. "$OUT/destdir-wrap/destdir/"
 tar -C "$OUT/destdir-wrap" -czf "$HOME/rpmbuild/SOURCES/pipa-qcom-userspace.tar.gz" destdir
 
-rpmbuild -bb --target=aarch64 --define "_topdir $HOME/rpmbuild" \
+rpmbuild -bb --target=aarch64 --define "_topdir $HOME/rpmbuild" --define "__strip /bin/true" --define "debug_package %{nil}" \
   "$HOME/rpmbuild/SPECS/pipa-qcom-userspace.spec"
 
 find "$HOME/rpmbuild/RPMS" -name 'pipa-qcom-userspace*.rpm' -exec cp -v {} "$HOST_OUT/" \;

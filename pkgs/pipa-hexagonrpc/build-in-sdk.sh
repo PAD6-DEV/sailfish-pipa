@@ -98,7 +98,7 @@ cp -a "$DEST"/. "$OUT/wrap/destdir/"
 mkdir -p "$HOME/rpmbuild"/{SOURCES,SPECS,RPMS,BUILD,SRPMS}
 tar -C "$OUT/wrap" -czf "$HOME/rpmbuild/SOURCES/pipa-hexagonrpc.tar.gz" destdir
 cp /sailfish-pipa/pkgs/pipa-hexagonrpc/rpm/pipa-hexagonrpc.spec "$HOME/rpmbuild/SPECS/"
-rpmbuild -bb --target=aarch64 --define "_topdir $HOME/rpmbuild" \
+rpmbuild -bb --target=aarch64 --define "_topdir $HOME/rpmbuild" --define "__strip /bin/true" --define "debug_package %{nil}" \
   "$HOME/rpmbuild/SPECS/pipa-hexagonrpc.spec"
 
 find "$HOME/rpmbuild/RPMS" -name 'pipa-hexagonrpc*.rpm' -exec cp -v {} "$HOST_OUT/" \;
