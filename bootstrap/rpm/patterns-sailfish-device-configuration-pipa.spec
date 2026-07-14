@@ -1,11 +1,13 @@
 Name:           patterns-sailfish-device-configuration-pipa
-Version:        0.3.1
+Version:        0.3.2
 Release:        1
 Summary:        Sailfish configuration pattern for Xiaomi Pad 6
 License:        BSD
 BuildArch:      noarch
 
-# Mirror droid-config-pinetab2 configuration pattern (dont_be_evil-ci)
+# Mirror droid-config-pinetab2 configuration pattern (dont_be_evil-ci).
+# Splash (yamuisplash) belongs on patterns-sailfish-device-adaptation-pipa
+# (droid-config-pipa/patterns/patterns-sailfish-device-adaptation-pipa.inc).
 Requires:       patterns-sailfish-ui
 Requires:       patterns-sailfish-applications
 Requires:       patterns-sailfish-consumer-generic
@@ -32,7 +34,6 @@ Requires:       strace
 Requires:       kmod
 Requires:       mtdev
 Requires:       qt5-plugin-platform-eglfs
-Requires:       yamuisplash
 Recommends:     sailfishos-chum-gui
 Recommends:     mce-tools
 Recommends:     gdb
@@ -45,6 +46,8 @@ normal Sailfish session.
 %files
 
 %changelog
+* Tue Jul 14 2026 Porter <porter@local> - 0.3.2-1
+- Drop yamuisplash (owned by adaptation pattern .inc)
 * Tue Jul 14 2026 Porter <porter@local> - 0.3.1-1
 - Require yamuisplash for early boot splash
 * Tue Jul 14 2026 Porter <porter@local> - 0.3.0-1
