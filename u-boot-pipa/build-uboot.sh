@@ -59,8 +59,9 @@ replacements = {
         "echo Loading Sailfish from scsi 0#linux; "
         "if load scsi 0#linux ${kernel_addr_r} /boot/Image; then "
         "load scsi 0#linux ${fdt_addr_r} /boot/dtbs/qcom/sm8250-xiaomi-pipa.dtb; "
-        "setenv bootargs root=LABEL=sfos_root rw rootwait "
-        "console=ttyMSM0,115200n8 earlycon ignore_loglevel "
+        # No initramfs: filesystem LABEL= needs udev. GPT PARTLABEL works in-kernel.
+        "setenv bootargs root=PARTLABEL=linux rw rootwait "
+        "console=tty0 console=ttyMSM0,115200n8 earlycon ignore_loglevel "
         "clk_ignore_unused pd_ignore_unused cma=128M; "
         "booti ${kernel_addr_r} - ${fdt_addr_r}; "
         "else "

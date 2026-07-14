@@ -109,7 +109,7 @@ DEFAULT sailfish
 LABEL sailfish
   KERNEL /boot/Image
   FDT /boot/dtbs/qcom/sm8250-xiaomi-pipa.dtb
-  APPEND root=LABEL=${ROOTFS_LABEL} rw rootwait console=ttyMSM0,115200n8 earlycon
+  APPEND root=PARTLABEL=linux rw rootwait console=tty0 console=ttyMSM0,115200n8 earlycon
 EOF
   fi
 
@@ -130,16 +130,32 @@ inject_bringup_fixes() {
     tar -C "$dest" -xzf "$MESA_TAR"
     test -e "$dest/usr/lib64/dri/msm_dri.so"
   else
-    echo "WARN: no Mesa freedreno tarball ($MESA_TAR) — GPU accel may be missing" >&2
+    echo "ERROR: Mesa freedreno tarball required ($MESA_TAR) — UI will be unusable on soft GL" >&2
+    exit 1
   fi
 
-  # Device firmware (pipa-mainline/xiaomi-pipa-firmware)
+  # Device firmware (GPU zap + Novatek touch, …)
   if [ -n "$FIRMWARE_TAR" ] && [ -f "$FIRMWARE_TAR" ]; then
     echo "Injecting pipa firmware from $FIRMWARE_TAR"
     tar -C "$dest" -xzf "$FIRMWARE_TAR"
     test -e "$dest/usr/lib/firmware/qcom/sm8250/xiaomi/pipa/a650_zap.mbn"
+    test -e "$dest/usr/lib/firmware/novatek/nt36532_csot.bin" \
+      -o -e "$dest/usr/lib/firmware/novatek/nt36532_tianma.bin"
+    # Kernel firmware loader often searches /lib/firmware (SFOS not always usr-merged)
+    mkdir -p "$dest/lib"
+    if [ -d "$dest/usr/lib/firmware" ] && [ ! -e "$dest/lib/firmware" ]; then
+      ln -sfn ../usr/lib/firmware "$dest/lib/firmware"
+    fi
   else
-    echo "WARN: no firmware tarball ($FIRMWARE_TAR) — GPU/modem may fail" >&2
+    echo "ERROR: firmware tarball required ($FIRMWARE_TAR) — touch/GPU will fail" >&2
+    exit 1
+  fi
+
+  # Enable MSM DRM picker before lipstick
+  if [ -f "$dest/usr/lib/systemd/system/pipa-eglfs-kms.service" ]; then
+    mkdir -p "$dest/etc/systemd/system/multi-user.target.wants"
+    ln -sfn /usr/lib/systemd/system/pipa-eglfs-kms.service \
+      "$dest/etc/systemd/system/multi-user.target.wants/pipa-eglfs-kms.service"
   fi
 
   # libmtdev for qt eglfs (packaged via kickstart; optional safety inject)
