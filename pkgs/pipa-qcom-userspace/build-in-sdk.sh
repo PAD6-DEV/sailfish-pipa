@@ -61,7 +61,13 @@ rm -rf "$WORK"
 mkdir -p "$DEST" "$OUT" "$HOST_OUT"
 
 sb2 -t "$TARGET" true
-sb2_install gcc make binutils pkgconfig meson ninja git xz-devel systemd-devel || true
+sb2_install gcc make binutils pkgconfig meson ninja git xz-devel systemd-devel \
+  kernel-headers || true
+
+# SFOS sysroot often lacks linux/qrtr.h — stage vendored UAPI into sb2-visible HOME.
+mkdir -p "$HOME/uapi-linux/linux"
+cp -a /sailfish-pipa/pkgs/pipa-qcom-userspace/files/linux/qrtr.h \
+  "$HOME/uapi-linux/linux/qrtr.h"
 
 fetch() {
   local name="$1" url="$2" ref="$3"
@@ -77,15 +83,23 @@ fetch pd-mapper https://github.com/linux-msm/pd-mapper.git "$PD_MAPPER_REF"
 fetch tqftpserv https://github.com/linux-msm/tqftpserv.git "$TQFTP_REF"
 fetch rmtfs https://github.com/linux-msm/rmtfs.git "$RMTFS_REF"
 
-# qrtr (meson)
-sb2_t bash -lc "cd $WORK/qrtr && meson setup build --prefix=/usr --libdir=lib64 && meson compile -C build -j$JOBS && DESTDIR=$DEST meson install -C build"
+# qrtr (meson) — inject UAPI include if sysroot lacks linux/qrtr.h
+sb2_t bash -lc "
+  set -e
+  cd $WORK/qrtr
+  export CFLAGS='-I$HOME/uapi-linux'
+  export CPPFLAGS=\"\$CFLAGS\"
+  meson setup build --prefix=/usr --libdir=lib64 -Dc_args=\"\$CFLAGS\"
+  meson compile -C build -j$JOBS
+  DESTDIR=$DEST meson install -C build
+"
 
 # pd-mapper (make; needs libqrtr from DEST or target — copy into target HOME)
 export LD_LIBRARY_PATH="${DEST}/usr/lib64:${DEST}/usr/lib:${LD_LIBRARY_PATH:-}"
 sb2_t bash -lc "
   set -e
   export PKG_CONFIG_PATH=$DEST/usr/lib64/pkgconfig:$DEST/usr/lib/pkgconfig
-  export CFLAGS='-I$DEST/usr/include'
+  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux'
   export LDFLAGS='-L$DEST/usr/lib64 -L$DEST/usr/lib'
   cd $WORK/pd-mapper
   make prefix=/usr -j$JOBS
@@ -96,10 +110,11 @@ sb2_t bash -lc "
 sb2_t bash -lc "
   set -e
   export PKG_CONFIG_PATH=$DEST/usr/lib64/pkgconfig:$DEST/usr/lib/pkgconfig
-  export CFLAGS='-I$DEST/usr/include'
+  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux'
   export LDFLAGS='-L$DEST/usr/lib64 -L$DEST/usr/lib'
   cd $WORK/tqftpserv
-  meson setup build --prefix=/usr --libdir=lib64
+  export CPPFLAGS="\$CFLAGS"
+  meson setup build --prefix=/usr --libdir=lib64 -Dc_args="\$CFLAGS"
   meson compile -C build -j$JOBS
   DESTDIR=$DEST meson install -C build
 "
@@ -108,7 +123,7 @@ sb2_t bash -lc "
 sb2_t bash -lc "
   set -e
   export PKG_CONFIG_PATH=$DEST/usr/lib64/pkgconfig:$DEST/usr/lib/pkgconfig
-  export CFLAGS='-I$DEST/usr/include'
+  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux'
   export LDFLAGS='-L$DEST/usr/lib64 -L$DEST/usr/lib'
   cd $WORK/rmtfs
   touch qmi_rmtfs.c qmi_rmtfs.h
