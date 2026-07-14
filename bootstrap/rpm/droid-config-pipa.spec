@@ -1,5 +1,5 @@
 Name:           droid-config-pipa
-Version:        0.1.5
+Version:        0.1.6
 Release:        1
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
@@ -50,6 +50,8 @@ rm -rf %{buildroot}/var/lib/environment/usb-moded
 /var
 
 %changelog
+* Wed Jul 15 2026 Porter <porter@local> - 0.1.6-1
+- Allow USB RNDIS through ConnMan firewall for SSH
 * Wed Jul 15 2026 Porter <porter@local> - 0.1.5-1
 - Add ucm.conf, HDMI UCM stub, pipa-fastrpc-perms oneshot
 
