@@ -3,6 +3,9 @@ name: Publish prebuilts to GitHub Pages
 # Build U-Boot, Mesa, pipa firmware, adaptation RPMs, and mirror the kernel once;
 # publish under https://pad6-dev.github.io/sailfish-pipa/{adaptation,prebuilts}/
 # Enable: Settings → Pages → GitHub Actions. Then run this before the image workflow.
+#
+# Each heavy job restores outputs from actions/cache when its source inputs are
+# unchanged (skip rebuild). workflow_dispatch still reuses cache unless sources change.
 on:
   workflow_dispatch:
   push:
@@ -41,7 +44,14 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Cache U-Boot output
+        id: cache-uboot
+        uses: actions/cache@v4
+        with:
+          path: u-boot-pipa/out
+          key: uboot-${{ hashFiles('u-boot-pipa/build-uboot.sh', 'u-boot-pipa/mkbootimg.py', 'u-boot-pipa/*.cfg', 'u-boot-pipa/*.config', 'u-boot-pipa/**/*.patch') }}
       - name: Install toolchain
+        if: steps.cache-uboot.outputs.cache-hit != 'true'
         run: |
           set -eux
           sudo apt-get update -qq
@@ -50,11 +60,14 @@ jobs:
             make bison flex python3 python3-setuptools \
             swig libssl-dev libgnutls28-dev bc git gzip
       - name: Build U-Boot
+        if: steps.cache-uboot.outputs.cache-hit != 'true'
         run: |
           set -eux
           chmod +x u-boot-pipa/build-uboot.sh
           CROSS_COMPILE=aarch64-linux-gnu- bash u-boot-pipa/build-uboot.sh
           test -s u-boot-pipa/out/u-boot-xiaomi-pipa.img
+      - name: Verify U-Boot artifact
+        run: test -s u-boot-pipa/out/u-boot-xiaomi-pipa.img
       - uses: actions/upload-artifact@v4
         with:
           name: pub-uboot
@@ -67,14 +80,25 @@ jobs:
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
+      - name: Cache Mesa tarball
+        id: cache-mesa
+        uses: actions/cache@v4
+        with:
+          path: mesa-pipa/out
+          key: mesa-${{ hashFiles('mesa-pipa/build-mesa-freedreno.sh', 'mesa-pipa/include/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
       - name: Build Mesa inside SFOS Platform SDK (sb2 aarch64)
+        if: steps.cache-mesa.outputs.cache-hit != 'true'
         run: |
           set -eux
           chmod +x mesa-pipa/build-mesa-freedreno.sh
-          # Full Platform SDK (not -base): has aarch64 sb2 target matching SFOS glibc.
           SDK_IMAGE="$MESA_SDK_IMAGE" \
           SFOS_SDK_RELEASE="$SFOS_SDK_RELEASE" \
             bash mesa-pipa/build-mesa-freedreno.sh
+          test -s mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
+          tar -tzf mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz | grep -E 'dri/msm_dri\.so$'
+      - name: Verify Mesa artifact
+        run: |
+          set -eux
           test -s mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz
           tar -tzf mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz | grep -E 'dri/msm_dri\.so$'
       - uses: actions/upload-artifact@v4
@@ -89,12 +113,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Cache firmware tarball
+        id: cache-fw
+        uses: actions/cache@v4
+        with:
+          path: firmware-pipa/out
+          key: firmware-${{ hashFiles('firmware-pipa/build-firmware-tarball.sh', 'firmware-pipa/*.files') }}
       - name: Pack firmware tarball
+        if: steps.cache-fw.outputs.cache-hit != 'true'
         run: |
           set -eux
           chmod +x firmware-pipa/build-firmware-tarball.sh
           bash firmware-pipa/build-firmware-tarball.sh
           test -s firmware-pipa/out/xiaomi-pipa-firmware.tar.gz
+      - name: Verify firmware artifact
+        run: test -s firmware-pipa/out/xiaomi-pipa-firmware.tar.gz
       - uses: actions/upload-artifact@v4
         with:
           name: pub-firmware
@@ -107,12 +140,20 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Cache bootstrap adaptation RPMs
+        id: cache-adapt
+        uses: actions/cache@v4
+        with:
+          path: repo/adaptation
+          key: adaptation-${{ hashFiles('bootstrap/**', 'droid-config-pipa/**') }}-sdkbase-${{ env.SFOS_SDK_RELEASE }}
       - name: Sync sparse into bootstrap
+        if: steps.cache-adapt.outputs.cache-hit != 'true'
         run: |
           set -eux
           rm -rf bootstrap/droid-config-pipa/sparse
           cp -a droid-config-pipa/sparse bootstrap/droid-config-pipa/sparse
       - name: Build bootstrap adaptation RPMs
+        if: steps.cache-adapt.outputs.cache-hit != 'true'
         run: |
           set -eux
           docker pull "$SDK_IMAGE"
@@ -128,13 +169,17 @@ jobs:
               test "$(find repo/adaptation -name "*.rpm" | wc -l)" -ge 3
               createrepo_c repo/adaptation || createrepo repo/adaptation
             '
+      - name: Verify adaptation RPMs
+        run: |
+          set -eux
+          test "$(find repo/adaptation -name '*.rpm' | wc -l)" -ge 3
+          ls -lh repo/adaptation
       - uses: actions/upload-artifact@v4
         with:
           name: pub-adaptation
           path: repo/adaptation/
           if-no-files-found: error
           retention-days: 7
-
 
   build-pkgs:
     runs-on: ubuntu-24.04
@@ -159,6 +204,12 @@ jobs:
         with:
           path: pkgs/pipa-hexagonrpc/out
           key: pipa-hex-${{ hashFiles('pkgs/pipa-hexagonrpc/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
+      - name: Cache firmware-pipa RPM
+        id: cache-fw-rpm
+        uses: actions/cache@v4
+        with:
+          path: pkgs/firmware-pipa/out
+          key: firmware-rpm-${{ hashFiles('pkgs/firmware-pipa/**', 'firmware-pipa/build-firmware-tarball.sh', 'firmware-pipa/*.files') }}
       - name: Build pipa-qcom-userspace (SFOS SDK sb2)
         if: steps.cache-qcom.outputs.cache-hit != 'true'
         run: |
@@ -176,6 +227,7 @@ jobs:
             bash pkgs/pipa-hexagonrpc/build-in-sdk.sh
           test -n "$(find pkgs/pipa-hexagonrpc/out -name 'pipa-hexagonrpc*.rpm')"
       - name: Pack firmware-pipa RPM
+        if: steps.cache-fw-rpm.outputs.cache-hit != 'true'
         run: |
           set -eux
           chmod +x pkgs/firmware-pipa/pack-rpm.sh
@@ -188,6 +240,7 @@ jobs:
           set -eux
           test -n "$(find pkgs/pipa-qcom-userspace/out -name 'pipa-qcom-userspace*.rpm')"
           test -n "$(find pkgs/pipa-hexagonrpc/out -name 'pipa-hexagonrpc*.rpm')"
+          test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
           ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/firmware-pipa/out
       - uses: actions/upload-artifact@v4
         with:
@@ -217,7 +270,8 @@ jobs:
           set -eux
           mkdir -p out/prebuilts repo/adaptation
           cp -a _arts/pub-adaptation/. repo/adaptation/
-          cp -f _arts/pub-pkgs/*.rpm repo/adaptation/ ||             find _arts/pub-pkgs -name '*.rpm' -exec cp -f {} repo/adaptation/ \;
+          cp -f _arts/pub-pkgs/*.rpm repo/adaptation/ || \
+            find _arts/pub-pkgs -name '*.rpm' -exec cp -f {} repo/adaptation/ \;
           sudo apt-get update -qq
           sudo apt-get install -y -qq createrepo-c || sudo apt-get install -y -qq createrepo
           createrepo_c repo/adaptation || createrepo repo/adaptation
