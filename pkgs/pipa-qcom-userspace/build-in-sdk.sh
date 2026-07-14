@@ -12,7 +12,6 @@ JOBS="${JOBS:-$(nproc)}"
 QRTR_REF="${QRTR_REF:-v1.1}"
 PD_MAPPER_REF="${PD_MAPPER_REF:-master}"
 TQFTP_REF="${TQFTP_REF:-master}"
-RMTFS_REF="${RMTFS_REF:-master}"
 
 if [ "${QCOM_IN_SDK:-0}" != 1 ]; then
   command -v docker >/dev/null || { echo "need docker" >&2; exit 1; }
@@ -28,7 +27,6 @@ if [ "${QCOM_IN_SDK:-0}" != 1 ]; then
     -e QRTR_REF="$QRTR_REF" \
     -e PD_MAPPER_REF="$PD_MAPPER_REF" \
     -e TQFTP_REF="$TQFTP_REF" \
-    -e RMTFS_REF="$RMTFS_REF" \
     -v "$REPO:/sailfish-pipa" \
     -w /sailfish-pipa \
     "$SDK_IMAGE" \
@@ -83,7 +81,6 @@ fetch() {
 fetch qrtr https://github.com/linux-msm/qrtr.git "$QRTR_REF" || fetch qrtr https://github.com/linux-msm/qrtr.git master
 fetch pd-mapper https://github.com/linux-msm/pd-mapper.git "$PD_MAPPER_REF"
 fetch tqftpserv https://github.com/linux-msm/tqftpserv.git "$TQFTP_REF"
-fetch rmtfs https://github.com/linux-msm/rmtfs.git "$RMTFS_REF"
 
 # qrtr (meson) — inject UAPI include if sysroot lacks linux/qrtr.h
 sb2_t bash -lc "
@@ -121,21 +118,10 @@ sb2_t bash -lc "
   DESTDIR=$DEST meson install -C build
 "
 
-# rmtfs
-sb2_t bash -lc "
-  set -e
-  export PKG_CONFIG_PATH=$DEST/usr/lib64/pkgconfig:$DEST/usr/lib/pkgconfig
-  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux -include $HOME/uapi-linux/sfos-compat.h'
-  export LDFLAGS='-L$DEST/usr/lib64 -L$DEST/usr/lib'
-  cd $WORK/rmtfs
-  touch qmi_rmtfs.c qmi_rmtfs.h
-  make prefix=/usr -j$JOBS
-  make DESTDIR=$DEST prefix=/usr install
-"
 
 # Upstream may have already installed units; only write if missing
 mkdir -p "$DEST/usr/lib/systemd/system"
-for unit in pd-mapper tqftpserv rmtfs; do
+for unit in pd-mapper tqftpserv; do
   if [ ! -f "$DEST/usr/lib/systemd/system/${unit}.service" ]; then
     case "$unit" in
       pd-mapper)
@@ -158,18 +144,6 @@ After=pd-mapper.service
 Wants=pd-mapper.service
 [Service]
 ExecStart=/usr/bin/tqftpserv
-Restart=on-failure
-[Install]
-WantedBy=multi-user.target
-U
-        ;;
-      rmtfs)
-        cat > "$DEST/usr/lib/systemd/system/rmtfs.service" <<'U'
-[Unit]
-Description=Qualcomm Remote Filesystem Service
-After=pd-mapper.service
-[Service]
-ExecStart=/usr/bin/rmtfs -r -P -s
 Restart=on-failure
 [Install]
 WantedBy=multi-user.target

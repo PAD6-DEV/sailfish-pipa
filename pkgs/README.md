@@ -9,7 +9,7 @@ Built into GitHub Pages adaptation repo:
 | `droid-config-pipa` | sparse overlays (UCM, USB, wifi, sensors conf) |
 | `kernel-adaptation-pipa` | kernel placeholder / staged Image |
 | `patterns-sailfish-device-configuration-pipa` | pull in device stack |
-| `pipa-qcom-userspace` | qrtr, pd-mapper, tqftpserv, rmtfs |
+| `pipa-qcom-userspace` | qrtr, pd-mapper, tqftpserv |
 | `pipa-hexagonrpc` | hexagonrpcd + libhexagonrpc |
 | `firmware-pipa` | GPU/DSP/touch/WiFi/BT firmware |
 
