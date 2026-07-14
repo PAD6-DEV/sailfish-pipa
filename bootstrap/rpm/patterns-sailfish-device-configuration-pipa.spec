@@ -1,5 +1,5 @@
 Name:           patterns-sailfish-device-configuration-pipa
-Version:        0.3.0
+Version:        0.3.1
 Release:        1
 Summary:        Sailfish configuration pattern for Xiaomi Pad 6
 License:        BSD
@@ -32,6 +32,7 @@ Requires:       strace
 Requires:       kmod
 Requires:       mtdev
 Requires:       qt5-plugin-platform-eglfs
+Requires:       yamuisplash
 Recommends:     sailfishos-chum-gui
 Recommends:     mce-tools
 Recommends:     gdb
@@ -44,6 +45,8 @@ normal Sailfish session.
 %files
 
 %changelog
+* Tue Jul 14 2026 Porter <porter@local> - 0.3.1-1
+- Require yamuisplash for early boot splash
 * Tue Jul 14 2026 Porter <porter@local> - 0.3.0-1
 - Pull qcom userspace, hexagonrpc, and firmware-pipa from adaptation repo
 * Mon Jul 13 2026 Porter <porter@local> - 0.2.0-1

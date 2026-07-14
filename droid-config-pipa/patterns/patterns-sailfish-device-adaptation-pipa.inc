@@ -14,8 +14,7 @@ Requires: qt5-plugin-platform-eglfs
 Requires: mtdev
 
 # Splash screen
-Requires: plymouth-lite
-Requires: plymouth-lite-theme-default
+Requires: yamuisplash
 
 # Bluetooth tools
 Requires: bluez5-tools
