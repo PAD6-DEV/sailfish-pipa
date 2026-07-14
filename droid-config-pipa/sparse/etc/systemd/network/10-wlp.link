@@ -1,0 +1,7 @@
+# ath11k: keep a stable MAC so ConnMan favorites (wifi_<mac>_...) keep matching
+[Match]
+Driver=ath11k_pci
+
+[Link]
+MACAddressPolicy=permanent
+NamePolicy=keep kernel database onboard slot path
