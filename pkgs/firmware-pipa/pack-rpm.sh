@@ -14,6 +14,6 @@ tar -C "$WORK/wrap/destdir" -xzf "$TGZ"
 # Only ship /usr and /lib from the tarball
 tar -C "$WORK/wrap" -czf "$HOME/rpmbuild/SOURCES/firmware-pipa-tree.tar.gz" destdir
 cp "$ROOT/rpm/firmware-pipa.spec" "$HOME/rpmbuild/SPECS/"
-rpmbuild -bb --define "_topdir $HOME/rpmbuild" "$HOME/rpmbuild/SPECS/firmware-pipa.spec"
+rpmbuild -bb --define "_topdir $HOME/rpmbuild" --define "__strip /bin/true" --define "debug_package %{nil}" "$HOME/rpmbuild/SPECS/firmware-pipa.spec"
 find "$HOME/rpmbuild/RPMS" -name 'firmware-pipa*.rpm' -exec cp -v {} "$OUT/" \;
 ls -la "$OUT"

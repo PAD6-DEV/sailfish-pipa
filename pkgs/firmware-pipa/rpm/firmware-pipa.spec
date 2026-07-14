@@ -1,10 +1,15 @@
 Name:           firmware-pipa
 Version:        20260714
-Release:        1
+Release:        2
 Summary:        Xiaomi Pad 6 firmware (GPU, DSP, touch, WiFi, BT)
 License:        Proprietary
 Source0:        firmware-pipa-tree.tar.gz
 BuildArch:      noarch
+
+# DSP Hexagon blobs look like ELF to brp-strip; host strip cannot process them.
+%global __strip /bin/true
+%global __brp_strip_comment_note %{nil}
+%global debug_package %{nil}
 
 %description
 Device firmware for Xiaomi Pad 6 mainline: Adreno, DSP hexagon FS,
@@ -24,9 +29,10 @@ cp -a . %{buildroot}/
 %defattr(-,root,root,-)
 /usr/lib/firmware
 /usr/share/qcom
-# optional usr→lib firmware symlink from tarball
 /lib
 
 %changelog
+* Tue Jul 14 2026 Porter <porter@local> - 20260714-2
+- Skip host strip for Hexagon DSP firmware blobs
 * Tue Jul 14 2026 Porter <porter@local> - 20260714-1
 - Package pipa firmware tree as installable RPM
