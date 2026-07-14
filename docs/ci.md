@@ -8,7 +8,7 @@ Workflow: [`.github/workflows/build-rootfs.yml`](../.github/workflows/build-root
 
 | Job | Output |
 |-----|--------|
-| `build-uboot` | `u-boot-xiaomi-pipa.img` (blkmap GPT **linux**) |
+| `build-uboot` | `u-boot-xiaomi-pipa.img` (blkmap GPT **linux** + extlinux; no ESP) |
 | `build-mesa` | `mesa-freedreno-sfos-aarch64.tar.gz` (msm/freedreno for glibc 2.30) |
 | `build-rootfs` | mic `sfe-pipa-*.tar.bz2` (full UI via pinetab2-style patterns) |
 | `pack-flash-set` | injects Mesa + kernel into rootfs, packs flash set |

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build Qualcomm U-Boot for Xiaomi Pad 6 (pipa), pmOS-style.
-# Maps the GPT "linux" partition via blkmap (multiboot-safe; userdata untouched).
+# Maps GPT "linux" via blkmap and boots /boot/extlinux from that rootfs.
+# Does NOT use bootefi/ESP (stock qcom-phone.env would require one).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -36,20 +37,71 @@ ENV_FILE="$SRC/board/qualcomm/qcom-phone.env"
   exit 1
 }
 
-# Map GPT partition "linux" as blkmap root (Sailfish rootfs + /boot).
-PREBOOT='preboot=scsi scan; part start scsi 0 linux linux_start; part size scsi 0 linux linux_size; blkmap create root; blkmap map root 0 0x${linux_size} linear scsi 0 0x${linux_start}'
-if grep -q '^preboot=' "$ENV_FILE"; then
-  sed -i "s|^preboot=.*$|${PREBOOT}|" "$ENV_FILE"
-else
-  printf '%s\n' "$PREBOOT" >> "$ENV_FILE"
-fi
-echo "Patched preboot for linux partition:"
-grep '^preboot=' "$ENV_FILE"
+# Stock qcom-phone.env uses `bootefi bootmgr` (needs an ESP). Sailfish stores
+# Image + extlinux on the GPT "linux" rootfs instead — boot that via blkmap.
+python3 - "$ENV_FILE" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+lines = path.read_text().splitlines()
+
+replacements = {
+    "preboot": (
+        "preboot=scsi scan; "
+        "part start scsi 0 linux linux_start; "
+        "part size scsi 0 linux linux_size; "
+        "blkmap create root; "
+        "blkmap map root 0 ${linux_size} linear scsi 0 ${linux_start}"
+    ),
+    # Prefer extlinux on the mapped rootfs; do not require ESP / EFI bootmgr.
+    "boot_sfos": (
+        "boot_sfos="
+        "blkmap get root dev rootdev; "
+        "if bootflow scan -lb blkmap${rootdev}; then true; "
+        "elif load blkmap ${rootdev} ${kernel_addr_r} /boot/Image; then "
+        "load blkmap ${rootdev} ${fdt_addr_r} /boot/dtbs/qcom/sm8250-xiaomi-pipa.dtb; "
+        "setenv bootargs root=LABEL=sfos_root rw rootwait "
+        "console=ttyMSM0,115200n8 earlycon ignore_loglevel "
+        "clk_ignore_unused pd_ignore_unused cma=128M; "
+        "booti ${kernel_addr_r} - ${fdt_addr_r}; "
+        "else echo \"Sailfish: no /boot on linux partition\"; false; fi"
+    ),
+    "bootcmd": "bootcmd=run boot_sfos; pause; run menucmd",
+    "bootmenu_0": "bootmenu_0=Boot Sailfish=run boot_sfos; pause",
+}
+
+out = []
+seen = set()
+for line in lines:
+    key = line.split("=", 1)[0] if "=" in line else None
+    if key in replacements:
+        out.append(replacements[key])
+        seen.add(key)
+    else:
+        out.append(line)
+
+# Ensure keys exist even if upstream env drops them.
+for key, val in replacements.items():
+    if key not in seen:
+        out.append(val)
+
+path.write_text("\n".join(out) + "\n")
+print(f"Patched {path} for ESP-less Sailfish boot:")
+for key in replacements:
+    for line in path.read_text().splitlines():
+        if line.startswith(key + "="):
+            print(f"  {line[:140]}{'...' if len(line) > 140 else ''}")
+            break
+PY
 
 cd "$SRC"
 export CROSS_COMPILE
 make qcom_defconfig qcom-phone.config
 ./scripts/config --enable CONFIG_BLKMAP --enable CONFIG_CMD_BLKMAP
+./scripts/config --enable CONFIG_BOOTMETH_EXTLINUX
+./scripts/config --enable CONFIG_CMD_BOOTI
+./scripts/config --enable CONFIG_FS_EXT4
 ./scripts/config --set-str CONFIG_DEFAULT_DEVICE_TREE "$DTB_NAME"
 # Host tool mkeficapsule needs gnutls; we don't need EFI capsules for pipa boot.img
 ./scripts/config --disable CONFIG_TOOLS_MKFICAPSULE 2>/dev/null || true

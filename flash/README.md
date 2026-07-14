@@ -1,6 +1,7 @@
 # Flashing Sailfish OS on Xiaomi Pad 6
 
 Boot: **Qualcomm U-Boot** + rootfs on GPT **`linux`** (built entirely in CI).
+No ESP/`rawdump` flash is required — U-Boot loads `/boot/extlinux` from the rootfs.
 
 | File | Partition |
 |------|-----------|
