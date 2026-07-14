@@ -145,7 +145,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: repo/adaptation
-          key: adaptation-${{ hashFiles('bootstrap/**', 'droid-config-pipa/**') }}-sdkbase-${{ env.SFOS_SDK_RELEASE }}
+          key: adaptation-${{ hashFiles(
+            'bootstrap/build-rpms.sh',
+            'bootstrap/rpm/**',
+            'bootstrap/droid-config-pipa/**',
+            'droid-config-pipa/sparse/**',
+            'droid-config-pipa/patterns/**',
+            'droid-config-pipa/rpm/**'
+          ) }}-sdkbase-${{ env.SFOS_SDK_RELEASE }}
       - name: Sync sparse into bootstrap
         if: steps.cache-adapt.outputs.cache-hit != 'true'
         run: |
@@ -197,19 +204,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: pkgs/pipa-qcom-userspace/out
-          key: pipa-qcom-${{ hashFiles('pkgs/pipa-qcom-userspace/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
+          key: pipa-qcom-${{ hashFiles('pkgs/pipa-qcom-userspace/build-in-sdk.sh', 'pkgs/pipa-qcom-userspace/rpm/**', 'pkgs/pipa-qcom-userspace/files/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
       - name: Cache pipa-hexagonrpc RPM
         id: cache-hex
         uses: actions/cache@v4
         with:
           path: pkgs/pipa-hexagonrpc/out
-          key: pipa-hex-${{ hashFiles('pkgs/pipa-hexagonrpc/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
+          key: pipa-hex-${{ hashFiles('pkgs/pipa-hexagonrpc/build-in-sdk.sh', 'pkgs/pipa-hexagonrpc/rpm/**', 'pkgs/pipa-hexagonrpc/files/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
       - name: Cache firmware-pipa RPM
         id: cache-fw-rpm
         uses: actions/cache@v4
         with:
           path: pkgs/firmware-pipa/out
-          key: firmware-rpm-${{ hashFiles('pkgs/firmware-pipa/**', 'firmware-pipa/build-firmware-tarball.sh', 'firmware-pipa/*.files') }}
+          key: firmware-rpm-${{ hashFiles('pkgs/firmware-pipa/pack-rpm.sh', 'pkgs/firmware-pipa/rpm/**', 'firmware-pipa/build-firmware-tarball.sh', 'firmware-pipa/*.files') }}
       - name: Build pipa-qcom-userspace (SFOS SDK sb2)
         if: steps.cache-qcom.outputs.cache-hit != 'true'
         run: |
