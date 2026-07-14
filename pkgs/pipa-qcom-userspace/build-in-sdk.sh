@@ -68,6 +68,8 @@ sb2_install gcc make binutils pkgconfig meson ninja git xz-devel systemd-devel \
 mkdir -p "$HOME/uapi-linux/linux"
 cp -a /sailfish-pipa/pkgs/pipa-qcom-userspace/files/linux/qrtr.h \
   "$HOME/uapi-linux/linux/qrtr.h"
+cp -a /sailfish-pipa/pkgs/pipa-qcom-userspace/files/sfos-compat.h \
+  "$HOME/uapi-linux/sfos-compat.h"
 
 fetch() {
   local name="$1" url="$2" ref="$3"
@@ -87,7 +89,7 @@ fetch rmtfs https://github.com/linux-msm/rmtfs.git "$RMTFS_REF"
 sb2_t bash -lc "
   set -e
   cd $WORK/qrtr
-  export CFLAGS='-I$HOME/uapi-linux -D__packed=__attribute__((__packed__))'
+  export CFLAGS='-I$HOME/uapi-linux -include $HOME/uapi-linux/sfos-compat.h'
   export CPPFLAGS=\"\$CFLAGS\"
   meson setup build --prefix=/usr --libdir=lib64 -Dc_args=\"\$CFLAGS\"
   meson compile -C build -j$JOBS
@@ -99,7 +101,7 @@ export LD_LIBRARY_PATH="${DEST}/usr/lib64:${DEST}/usr/lib:${LD_LIBRARY_PATH:-}"
 sb2_t bash -lc "
   set -e
   export PKG_CONFIG_PATH=$DEST/usr/lib64/pkgconfig:$DEST/usr/lib/pkgconfig
-  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux -D__packed=__attribute__((__packed__))'
+  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux -include $HOME/uapi-linux/sfos-compat.h'
   export LDFLAGS='-L$DEST/usr/lib64 -L$DEST/usr/lib'
   cd $WORK/pd-mapper
   make prefix=/usr -j$JOBS
@@ -110,7 +112,7 @@ sb2_t bash -lc "
 sb2_t bash -lc "
   set -e
   export PKG_CONFIG_PATH=$DEST/usr/lib64/pkgconfig:$DEST/usr/lib/pkgconfig
-  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux -D__packed=__attribute__((__packed__))'
+  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux -include $HOME/uapi-linux/sfos-compat.h'
   export LDFLAGS='-L$DEST/usr/lib64 -L$DEST/usr/lib'
   cd $WORK/tqftpserv
   export CPPFLAGS=\"\$CFLAGS\"
@@ -123,7 +125,7 @@ sb2_t bash -lc "
 sb2_t bash -lc "
   set -e
   export PKG_CONFIG_PATH=$DEST/usr/lib64/pkgconfig:$DEST/usr/lib/pkgconfig
-  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux -D__packed=__attribute__((__packed__))'
+  export CFLAGS='-I$DEST/usr/include -I$HOME/uapi-linux -include $HOME/uapi-linux/sfos-compat.h'
   export LDFLAGS='-L$DEST/usr/lib64 -L$DEST/usr/lib'
   cd $WORK/rmtfs
   touch qmi_rmtfs.c qmi_rmtfs.h
