@@ -1,5 +1,5 @@
 Name:           patterns-sailfish-device-configuration-pipa
-Version:        0.3.2
+Version:        0.3.4
 Release:        1
 Summary:        Sailfish configuration pattern for Xiaomi Pad 6
 License:        BSD
@@ -18,9 +18,12 @@ Requires:       geoclue-provider-mlsdb
 Requires:       csd
 Requires:       droid-config-pipa
 Requires:       kernel-adaptation-pipa
+Requires:       mesa-pipa
 Requires:       pipa-qcom-userspace
 Requires:       pipa-hexagonrpc
 Requires:       firmware-pipa
+Requires:       alsa-utils
+Requires:       alsa-ucm-conf
 Requires:       jolla-developer-mode
 Requires:       jolla-rnd-device
 Requires:       sailfishsilica-qt5-demos
@@ -46,6 +49,10 @@ normal Sailfish session.
 %files
 
 %changelog
+* Thu Jul 16 2026 Porter <porter@local> - 0.3.4-1
+- Pull alsa-utils and alsa-ucm-conf into mic images for native audio
+* Thu Jul 16 2026 Porter <porter@local> - 0.3.3-1
+- Require mesa-pipa so images install freedreno as an owned RPM
 * Tue Jul 14 2026 Porter <porter@local> - 0.3.2-1
 - Drop yamuisplash (owned by adaptation pattern .inc)
 * Tue Jul 14 2026 Porter <porter@local> - 0.3.1-1

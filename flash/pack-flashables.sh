@@ -31,7 +31,6 @@ ESP_LABEL="${ESP_LABEL:-SFOSPIPA}"
 LEGACY_UEFI="${LEGACY_UEFI:-0}"
 EXISTING_ROOTFS_RAW=""
 MTDEV_SO="${MTDEV_SO:-}"
-MESA_TAR="${MESA_TAR:-$REPO_ROOT/mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz}"
 FIRMWARE_TAR="${FIRMWARE_TAR:-$REPO_ROOT/firmware-pipa/out/xiaomi-pipa-firmware.tar.gz}"
 
 while [ $# -gt 0 ]; do
@@ -44,7 +43,7 @@ while [ $# -gt 0 ]; do
     --rootfs-size-mb) ROOTFS_SIZE_MB="$2"; shift 2 ;;
     --target-part) TARGET_PART="$2"; shift 2 ;;
     --mtdev-so) MTDEV_SO="$2"; shift 2 ;;
-    --mesa-tar) MESA_TAR="$2"; shift 2 ;;
+    --mesa-tar) echo "WARN: --mesa-tar is ignored; Mesa is installed via mesa-pipa RPM" >&2; shift 2 ;;
     --firmware-tar) FIRMWARE_TAR="$2"; shift 2 ;;
     *) echo "Unknown arg: $1" >&2; exit 1 ;;
   esac
@@ -124,15 +123,13 @@ EOF
 
 inject_bringup_fixes() {
   local dest="$1"
-  # Freedreno Mesa overlay (Pages prebuilt) — replaces soft/panfrost-only dri
-  if [ -n "$MESA_TAR" ] && [ -f "$MESA_TAR" ]; then
-    echo "Injecting Mesa freedreno from $MESA_TAR"
-    tar -C "$dest" -xzf "$MESA_TAR"
-    test -e "$dest/usr/lib64/dri/msm_dri.so"
-  else
-    echo "ERROR: Mesa freedreno tarball required ($MESA_TAR) — UI will be unusable on soft GL" >&2
+  # Mesa/freedreno must come from the mesa-pipa RPM in the rootfs. Do not overlay
+  # the raw tarball here, otherwise rpm ownership still shows llvmpipe.
+  if command -v rpm >/dev/null 2>&1 && ! rpm --root "$dest" -q mesa-pipa >/dev/null 2>&1; then
+    echo "ERROR: mesa-pipa is not installed in rootfs — GPU would fall back to llvmpipe" >&2
     exit 1
   fi
+  test -e "$dest/usr/lib64/dri/msm_dri.so"
 
   # Device firmware (GPU zap + Novatek touch, …)
   if [ -n "$FIRMWARE_TAR" ] && [ -f "$FIRMWARE_TAR" ]; then
