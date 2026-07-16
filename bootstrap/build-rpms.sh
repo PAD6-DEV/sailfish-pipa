@@ -25,7 +25,8 @@ find "$HOME/rpmbuild/RPMS" -name '*.rpm' -exec cp -v {} "$DEST/" \;
 for d in \
   "$ROOT/pkgs/pipa-qcom-userspace/out" \
   "$ROOT/pkgs/pipa-hexagonrpc/out" \
-  "$ROOT/pkgs/firmware-pipa/out"
+  "$ROOT/pkgs/firmware-pipa/out" \
+  "$ROOT/pkgs/mesa-pipa/out"
 do
   if [ -d "$d" ]; then
     find "$d" -maxdepth 1 -name '*.rpm' -exec cp -v {} "$DEST/" \;
