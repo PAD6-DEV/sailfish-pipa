@@ -82,7 +82,17 @@ jobs:
                 bash pkgs/firmware-pipa/pack-rpm.sh
                 cp -a pkgs/firmware-pipa/out/firmware-pipa*.rpm repo/adaptation/
               fi
+              # If mesa-pipa RPM still missing, pack from Pages Mesa tarball.
+              if ! ls repo/adaptation/mesa-pipa*.rpm >/dev/null 2>&1; then
+                mkdir -p mesa-pipa/out
+                curl -fsSL -o mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz \
+                  "${PREBUILTS_BASE:-https://pad6-dev.github.io/sailfish-pipa/prebuilts}/mesa-freedreno-sfos-aarch64.tar.gz"
+                chmod +x pkgs/mesa-pipa/pack-rpm.sh
+                bash pkgs/mesa-pipa/pack-rpm.sh
+                cp -a pkgs/mesa-pipa/out/mesa-pipa*.rpm repo/adaptation/
+              fi
               test -n "$(find repo/adaptation -name "firmware-pipa*.rpm")"
+              test -n "$(find repo/adaptation -name "mesa-pipa*.rpm")"
               test -n "$(find repo/adaptation -name "pipa-qcom-userspace*.rpm")" || \
                 echo "WARN: pipa-qcom-userspace missing — pattern may fail if Required"
               createrepo_c repo/adaptation || createrepo repo/adaptation

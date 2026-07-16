@@ -203,7 +203,7 @@ jobs:
   build-pkgs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    needs: [build-firmware]
+    needs: [build-firmware, build-mesa]
     steps:
       - uses: actions/checkout@v4
       - name: Download firmware tarball
@@ -211,6 +211,11 @@ jobs:
         with:
           name: pub-firmware
           path: firmware-pipa/out
+      - name: Download Mesa tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: pub-mesa
+          path: mesa-pipa/out
       - name: Cache pipa-qcom-userspace RPM
         id: cache-qcom
         uses: actions/cache@v4
@@ -229,6 +234,12 @@ jobs:
         with:
           path: pkgs/firmware-pipa/out
           key: firmware-rpm-${{ hashFiles('pkgs/firmware-pipa/pack-rpm.sh', 'pkgs/firmware-pipa/rpm/**', 'firmware-pipa/build-firmware-tarball.sh', 'firmware-pipa/*.files') }}
+      - name: Cache mesa-pipa RPM
+        id: cache-mesa-rpm
+        uses: actions/cache@v4
+        with:
+          path: pkgs/mesa-pipa/out
+          key: mesa-rpm-${{ hashFiles('pkgs/mesa-pipa/pack-rpm.sh', 'pkgs/mesa-pipa/rpm/**', 'mesa-pipa/build-mesa-freedreno.sh', 'mesa-pipa/include/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
       - name: Build pipa-qcom-userspace (SFOS SDK sb2)
         if: steps.cache-qcom.outputs.cache-hit != 'true'
         run: |
@@ -254,13 +265,23 @@ jobs:
           sudo apt-get install -y -qq rpm
           bash pkgs/firmware-pipa/pack-rpm.sh
           test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
+      - name: Pack mesa-pipa RPM
+        if: steps.cache-mesa-rpm.outputs.cache-hit != 'true'
+        run: |
+          set -eux
+          chmod +x pkgs/mesa-pipa/pack-rpm.sh
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rpm
+          bash pkgs/mesa-pipa/pack-rpm.sh
+          test -n "$(find pkgs/mesa-pipa/out -name 'mesa-pipa*.rpm')"
       - name: Verify cached/built pkgs
         run: |
           set -eux
           test -n "$(find pkgs/pipa-qcom-userspace/out -name 'pipa-qcom-userspace*.rpm')"
           test -n "$(find pkgs/pipa-hexagonrpc/out -name 'pipa-hexagonrpc*.rpm')"
           test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
-          ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/firmware-pipa/out
+          test -n "$(find pkgs/mesa-pipa/out -name 'mesa-pipa*.rpm')"
+          ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/firmware-pipa/out pkgs/mesa-pipa/out
       - uses: actions/upload-artifact@v4
         with:
           name: pub-pkgs
@@ -268,6 +289,7 @@ jobs:
             pkgs/pipa-qcom-userspace/out/*.rpm
             pkgs/pipa-hexagonrpc/out/*.rpm
             pkgs/firmware-pipa/out/*.rpm
+            pkgs/mesa-pipa/out/*.rpm
           if-no-files-found: error
           retention-days: 7
 

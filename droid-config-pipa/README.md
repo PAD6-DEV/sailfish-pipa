@@ -1,11 +1,20 @@
-# Configuration package for Xiaomi Pad 6 (pipa) Sailfish OS
-# Native mainline adaptation (mesa/eglfs), modeled on sailfish-on-dontbeevil.
+# droid-config-pipa
 
-## Mer / local OBS
-Packages are intended for:
-`nemo:devel:hw:xiaomi:pipa` (or a local file repo during bring-up).
+Sailfish OS configuration for Xiaomi Pad 6 (`pipa`).
+
+Native mainline adaptation following
+[sailfish-on-dontbeevil/droid-config-pinetab2](https://github.com/sailfish-on-dontbeevil/droid-config-pinetab2):
+
+- `arm_native_default.pa` + native `xpolicy.conf`
+- ConnMan `main-native.conf` via `CONNMAN_ARGS`
+- `wlan-module-load.service` + `setup-configfs.service` + usb-moded
+- `start-bluetooth-adapter.service` + `setup-bt-address.service`
+
+Device-only pieces (sm8250 UCM, eglfs KMS, hexagon/fastrpc) stay pipa-local.
+Rockchip/modem/PinePhone files are not carried over.
 
 ## Build (Platform SDK)
+
 ```bash
 cd droid-config-pipa
 mb2 -t SailfishOS-...-aarch64 build

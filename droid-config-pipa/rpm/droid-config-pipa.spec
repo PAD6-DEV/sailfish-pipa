@@ -1,5 +1,5 @@
 # Xiaomi Pad 6 (pipa) — Sailfish OS native mainline adaptation
-# Structure follows sailfish-on-dontbeevil (pinetab/pinephone).
+# Structure adapted from sailfish-on-dontbeevil/droid-config-pinetab2
 
 %define device pipa
 %define vendor xiaomi
@@ -14,6 +14,10 @@
 %define pixel_ratio 1.5
 
 %define native_build 1
+
+# Device-specific usb-moded configuration (pinetab2 pattern)
+Provides: usb-moded-configs
+Obsoletes: usb-moded-defaults
 
 %include droid-configs-device/droid-configs.inc
 %include patterns/patterns-sailfish-device-adaptation-pipa.inc

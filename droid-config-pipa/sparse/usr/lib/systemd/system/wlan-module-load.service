@@ -1,0 +1,21 @@
+[Unit]
+Description=Load wifi module
+DefaultDependencies=false
+Conflicts=shutdown.target
+After=dbus.service
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/droid/persist-wlan-macaddr.sh
+ExecStartPre=/sbin/modprobe qrtr
+ExecStartPre=/sbin/modprobe qrtr_smd
+ExecStart=/sbin/modprobe ath11k_pci
+ExecStartPost=/bin/sleep 2
+ExecStartPost=/usr/sbin/rfkill unblock wifi
+ExecStop=/sbin/modprobe -r ath11k_pci
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=basic.target

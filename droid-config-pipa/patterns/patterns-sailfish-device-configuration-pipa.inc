@@ -3,30 +3,12 @@ Summary: Sailfish Configuration Xiaomi Pad 6 (pipa)
 
 Requires: patterns-sailfish-device-configuration-common-pipa
 Requires: patterns-sailfish-device-adaptation-pipa
+
 Requires: patterns-sailfish-applications
 Requires: patterns-sailfish-ui
 
-# No cellular apps on tablet
-#Requires: patterns-sailfish-cellular-apps
-
-# Jolla Store Items
-Requires: patterns-sailfish-consumer-generic
-Requires: patterns-sailfish-store-applications
-
-Requires: sailfish-content-graphics-z1.0
-Requires: jolla-settings-accounts-extensions-3rd-party-all
-
-# Online location (optional)
-Requires: geoclue-provider-mlsdb
-
-# CSD hardware testing
-Requires: csd
-
-Requires: kmod
-
-# Porter / debug tools
+# Early stages of porting benefit from these:
 Requires: jolla-developer-mode
-Requires: jolla-rnd-device
 Requires: sailfishsilica-qt5-demos
 Requires: busybox-static
 Requires: net-tools
@@ -36,9 +18,45 @@ Requires: vim-enhanced
 Requires: zypper
 Requires: strace
 
+# jolla-rnd-device will enable usb-moded even when UI is not yet
+# brought up (useful during development)
+Requires: jolla-rnd-device
+
+# Jolla Store Items
+Requires: patterns-sailfish-consumer-generic
+Requires: patterns-sailfish-store-applications
+
+Requires: sailfish-content-graphics-z1.0
+Requires: jolla-settings-accounts-extensions-3rd-party-all
+
+# For Mozilla location services (online)
+Requires: geoclue-provider-mlsdb
+
+# Sailfish OS CSD tool for hardware testing
+Requires: csd
+
+# KMod required for kmod-static-nodes.service
+Requires: kmod
+
+# Debug tools
 Recommends: vi
+Recommends: strace
 Recommends: gdb
 Recommends: mce-tools
+
+# Sailfish porter tools
+Recommends: jolla-developer-mode
+Recommends: sailfishsilica-qt5-demos
+Recommends: busybox-static
+Recommends: net-tools
+Recommends: openssh-clients
+Recommends: openssh-server
+Recommends: vim-enhanced
+Recommends: zypper
+Recommends: strace
+Recommends: jolla-rnd-device
+
+# Chum
 Recommends: sailfishos-chum-gui
 
 %description -n patterns-sailfish-device-configuration-pipa
