@@ -35,7 +35,7 @@ env:
   SDK_IMAGE: coderus/sailfishos-platform-sdk-base:4.6.0.13
   MESA_SDK_IMAGE: coderus/sailfishos-platform-sdk:5.0.0.43
   SFOS_SDK_RELEASE: "5.0.0.43"
-  KERNEL_PKG_URL: https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.0.8-21-aarch64.pkg.tar.xz
+  KERNEL_PKG_URL: https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.3-1-aarch64.pkg.tar.xz
   PAGES_BASE: https://pad6-dev.github.io/sailfish-pipa
 
 jobs:
@@ -311,15 +311,14 @@ jobs:
           set -eux
           mkdir -p out/prebuilts repo/adaptation
           cp -a _arts/pub-adaptation/. repo/adaptation/
-          cp -f _arts/pub-pkgs/*.rpm repo/adaptation/ || \
-            find _arts/pub-pkgs -name '*.rpm' -exec cp -f {} repo/adaptation/ \;
+          find _arts/pub-pkgs -name '*.rpm' -exec cp -f {} repo/adaptation/ \;
           sudo apt-get update -qq
           sudo apt-get install -y -qq createrepo-c || sudo apt-get install -y -qq createrepo
           createrepo_c repo/adaptation || createrepo repo/adaptation
           cp -f _arts/pub-uboot/u-boot-xiaomi-pipa.img out/prebuilts/
           cp -f _arts/pub-mesa/mesa-freedreno-sfos-aarch64.tar.gz out/prebuilts/
           cp -f _arts/pub-firmware/xiaomi-pipa-firmware.tar.gz out/prebuilts/
-          wget -q -O "out/prebuilts/$(basename "$KERNEL_PKG_URL")" "$KERNEL_PKG_URL"
+          wget -q --show-progress -O "out/prebuilts/$(basename "$KERNEL_PKG_URL")" "$KERNEL_PKG_URL"
           test -s "out/prebuilts/$(basename "$KERNEL_PKG_URL")"
           ls -lh out/prebuilts repo/adaptation
       - name: Configure Pages
