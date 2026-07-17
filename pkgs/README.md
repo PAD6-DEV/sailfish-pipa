@@ -13,6 +13,7 @@ Built into GitHub Pages adaptation repo:
 | `pipa-qcom-userspace` | qrtr, pd-mapper, tqftpserv |
 | `pipa-hexagonrpc` | hexagonrpcd + libhexagonrpc |
 | `libssc` | Sensor Core client (+ qmi-glib / qrtr-glib / protobuf-c) |
+| `sensorfw-qt5-libssc` | sensorfw accelerometer adaptor (libssc → orientation) |
 | `firmware-pipa` | GPU/DSP/touch/WiFi/BT firmware |
 
 ## On device
@@ -34,6 +35,7 @@ zypper in patterns-sailfish-device-configuration-pipa \
 ./pkgs/pipa-qcom-userspace/build-in-sdk.sh
 ./pkgs/pipa-hexagonrpc/build-in-sdk.sh
 ./pkgs/libssc/build-in-sdk.sh
+./pkgs/sensorfw-qt5-libssc/build-in-sdk.sh
 
 # Mesa freedreno RPM (needs mesa-pipa/out tarball from Platform SDK build)
 ./mesa-pipa/build-mesa-freedreno.sh

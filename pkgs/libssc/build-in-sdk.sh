@@ -208,6 +208,12 @@ sb2_t bash -lc "
   DESTDIR=$DEST meson install -C build
 "
 
+# Simplified pkg-config for SFOS (bundled qmi/qrtr; avoid missing .pc Requires)
+install -Dm644 /sailfish-pipa/pkgs/libssc/files/libssc.pc \
+  "$DEST/usr/share/libssc/libssc.pc"
+install -Dm644 /sailfish-pipa/pkgs/libssc/files/libssc.pc \
+  "$DEST/usr/lib64/pkgconfig/libssc.pc"
+
 # Package RPM
 rm -rf "$OUT/wrap"
 mkdir -p "$OUT/wrap/destdir"

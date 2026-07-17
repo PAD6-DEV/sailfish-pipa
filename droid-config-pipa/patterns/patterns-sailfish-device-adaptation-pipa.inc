@@ -20,8 +20,9 @@ Requires: bluez5-tools
 # Vibra
 Requires: libngf-qt5-qtfeedback
 
-# Sensors — SSC via libssc (hexagonrpcd + QRTR/QMI); not hybris
+# Sensors — SSC via libssc + sensorfw adaptor (not hybris / not IIO)
 Requires: libssc
+Requires: sensorfw-qt5-libssc
 #Requires: hybris-libsensorfw-qt5
 
 # Pulseaudio — MainVolume / ringtone Settings need these modules

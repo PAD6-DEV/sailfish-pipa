@@ -1,6 +1,6 @@
 Name:           droid-config-pipa
 Version:        0.1.5
-Release:        8
+Release:        9
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
 BuildArch:      noarch
@@ -59,6 +59,8 @@ rm -rf %{buildroot}/var/lib/environment/usb-moded
 %exclude /etc/dbus-1/system.d/ohm-policy.conf
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-9
+- Point sensorfw at sscaccelerometeradaptor; wait for hexagonrpcd
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-8
 - Mount Android persist for SSC sensor registry; stop forcing IIO sensorfw adaptors
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-7
