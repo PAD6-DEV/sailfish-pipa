@@ -10,6 +10,11 @@ TARGET="${SFOS_TARGET:-SailfishOS-${SFOS_SDK_RELEASE}-aarch64}"
 HOST_OUT="${LIBCAMERA_OUT:-$ROOT/out}"
 JOBS="${JOBS:-$(nproc)}"
 LIBCAMERA_VER="${LIBCAMERA_VER:-0.7.1}"
+MESON_VER="${MESON_VER:-1.7.2}"
+JINJA_VER="${JINJA_VER:-3.1.6}"
+MARKUPSAFE_VER="${MARKUPSAFE_VER:-2.1.5}"
+PLY_VER="${PLY_VER:-3.11}"
+PYYAML_VER="${PYYAML_VER:-6.0.2}"
 
 if [ "${LIBCAMERA_IN_SDK:-0}" != 1 ]; then
   command -v docker >/dev/null || { echo "need docker" >&2; exit 1; }
@@ -23,6 +28,11 @@ if [ "${LIBCAMERA_IN_SDK:-0}" != 1 ]; then
     -e SFOS_TARGET="$TARGET" \
     -e LIBCAMERA_HOST_OUT=/sailfish-pipa/pkgs/libcamera/out \
     -e LIBCAMERA_VER="$LIBCAMERA_VER" \
+    -e MESON_VER="$MESON_VER" \
+    -e JINJA_VER="$JINJA_VER" \
+    -e MARKUPSAFE_VER="$MARKUPSAFE_VER" \
+    -e PLY_VER="$PLY_VER" \
+    -e PYYAML_VER="$PYYAML_VER" \
     -v "$REPO:/sailfish-pipa" \
     -w /sailfish-pipa \
     "$SDK_IMAGE" \
@@ -55,8 +65,8 @@ rm -rf "$WORK"
 mkdir -p "$DEST" "$OUT" "$HOST_OUT" "$WORK/src"
 
 sb2 -t "$TARGET" true
-sb2_install gcc gcc-c++ make binutils pkgconfig meson ninja git curl tar \
-  xz gzip cmake python3-pip \
+sb2_install gcc gcc-c++ make binutils pkgconfig ninja git curl tar \
+  xz gzip cmake python3 \
   openssl-devel libdrm-devel libyaml-devel libelf-devel \
   libjpeg-turbo-devel libtiff-devel \
   gstreamer1.0-devel gstreamer1.0-plugins-base-devel \
@@ -67,17 +77,42 @@ sb2_install pkgconfig\(libdrm\) pkgconfig\(yaml-0.1\) pkgconfig\(libelf\) \
   pkgconfig\(gstreamer-1.0\) pkgconfig\(gstreamer-video-1.0\) \
   pkgconfig\(glib-2.0\) pkgconfig\(libudev\) pkgconfig\(openssl\) || true
 
-# meson from pip if the image is too old
-sb2_t bash -lc "
-  set -e
-  python3 -m pip install --user 'meson>=0.63' 'ninja' 'jinja2' 'ply' 'pyyaml' 2>/dev/null || \
-    pip3 install --user 'meson>=0.63' 'ninja' 'jinja2' 'ply' 'pyyaml' || true
-  export PATH=\"\$HOME/.local/bin:\$PATH\"
-  meson --version
-  python3 -c 'import jinja2,ply,yaml'
-"
+# The SFOS target has no pip and its Meson package is unavailable/too old.
+# Stage architecture-independent Python build tools directly under $HOME,
+# which is visible inside sb2.
+PYTHON_STAGE="$WORK/python"
+mkdir -p "$PYTHON_STAGE"
+fetch_python_archive() {
+  local url="$1" archive="$2"
+  curl -fL --retry 3 -o "$WORK/$archive" "$url"
+  tar -C "$WORK/src" -xzf "$WORK/$archive"
+}
 
-export PATH="${HOME}/.local/bin:${PATH}"
+fetch_python_archive \
+  "https://github.com/mesonbuild/meson/releases/download/${MESON_VER}/meson-${MESON_VER}.tar.gz" \
+  "meson.tar.gz"
+fetch_python_archive \
+  "https://github.com/pallets/jinja/archive/refs/tags/${JINJA_VER}.tar.gz" \
+  "jinja.tar.gz"
+fetch_python_archive \
+  "https://github.com/pallets/markupsafe/archive/refs/tags/${MARKUPSAFE_VER}.tar.gz" \
+  "markupsafe.tar.gz"
+fetch_python_archive \
+  "https://github.com/dabeaz/ply/archive/refs/tags/${PLY_VER}.tar.gz" \
+  "ply.tar.gz"
+fetch_python_archive \
+  "https://github.com/yaml/pyyaml/archive/refs/tags/${PYYAML_VER}.tar.gz" \
+  "pyyaml.tar.gz"
+
+cp -a "$WORK/src/jinja-${JINJA_VER}/src/jinja2" "$PYTHON_STAGE/"
+cp -a "$WORK/src/markupsafe-${MARKUPSAFE_VER}/src/markupsafe" "$PYTHON_STAGE/"
+cp -a "$WORK/src/ply-${PLY_VER}/src/ply" "$PYTHON_STAGE/"
+cp -a "$WORK/src/pyyaml-${PYYAML_VER}/lib/yaml" "$PYTHON_STAGE/"
+MESON="$WORK/src/meson-${MESON_VER}/meson.py"
+test -f "$MESON"
+
+sb2_t env PYTHONPATH="$PYTHON_STAGE" python3 "$MESON" --version
+sb2_t env PYTHONPATH="$PYTHON_STAGE" python3 -c 'import jinja2, ply, yaml'
 
 echo "==> fetch libcamera ${LIBCAMERA_VER}"
 curl -fL --retry 3 -o "$WORK/libcamera.tar.gz" \
@@ -97,10 +132,10 @@ cp -a /sailfish-pipa/pkgs/libcamera/patches/. "$WORK/"
 echo "==> meson configure + build"
 sb2_t bash -lc "
   set -e
-  export PATH=\"\$HOME/.local/bin:\$PATH\"
+  export PYTHONPATH=$PYTHON_STAGE
   cd $SRC
   rm -rf build
-  meson setup build --prefix=/usr --libdir=lib64 \
+  python3 $MESON setup build --prefix=/usr --libdir=lib64 \
     -Dcpp_args='-Wno-array-bounds' \
     -Ddocumentation=disabled \
     -Dpipelines=simple,uvcvideo,vimc \
@@ -112,8 +147,8 @@ sb2_t bash -lc "
     -Dqcam=disabled \
     -Dpycamera=disabled \
     -Dtest=false
-  meson compile -C build -j$JOBS
-  DESTDIR=$DEST meson install -C build
+  python3 $MESON compile -C build -j$JOBS
+  DESTDIR=$DEST python3 $MESON install -C build
 "
 
 # IPA tuning for pipa sensors
