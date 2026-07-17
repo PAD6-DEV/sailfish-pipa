@@ -1,6 +1,6 @@
 Name:           libssc
 Version:        0.4.4
-Release:        3
+Release:        4
 Summary:        Qualcomm Sensor Core client library (and QMI/QRTR deps)
 License:        GPL-3.0-or-later
 URL:            https://codeberg.org/DylanVanAssche/libssc
@@ -73,6 +73,8 @@ fi
 /usr/lib64/pkgconfig/libssc.pc
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.4.4-4
+- Add G_BEGIN_DECLS to public sensor headers for C++ consumers
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.4.4-3
 - Add libssc-devel for sensorfw adaptor builds
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.4.4-2

@@ -23,6 +23,8 @@
 #include <gio/gio.h>
 #include "libssc-sensor.h"
 
+G_BEGIN_DECLS
+
 #define SSC_TYPE_SENSOR_GYROSCOPE (ssc_sensor_gyroscope_get_type())
 
 typedef struct _SSCSensorGyroscope {
@@ -41,4 +43,7 @@ void			 ssc_sensor_gyroscope_close (SSCSensorGyroscope *self, GCancellable *canc
 gboolean		 ssc_sensor_gyroscope_close_finish (SSCSensorGyroscope *self, GAsyncResult *result, GError **error);
 gboolean                 ssc_sensor_gyroscope_close_sync (SSCSensorGyroscope *self, GCancellable *cancellable, GError **error);
 
+
+G_END_DECLS
 #endif /* _LIBSSC_SENSOR_GYROSCOPE_H_ */
+

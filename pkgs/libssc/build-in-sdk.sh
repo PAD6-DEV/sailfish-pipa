@@ -208,6 +208,11 @@ sb2_t bash -lc "
   DESTDIR=$DEST meson install -C build
 "
 
+# Overlay public headers with C++-safe G_BEGIN_DECLS wrappers (upstream
+# sensor-type headers omit them; C++ consumers otherwise mangle symbols).
+install -d "$DEST/usr/include/libssc"
+cp -a /sailfish-pipa/pkgs/libssc/include/libssc/. "$DEST/usr/include/libssc/"
+
 # Simplified pkg-config for SFOS (bundled qmi/qrtr; avoid missing .pc Requires)
 install -Dm644 /sailfish-pipa/pkgs/libssc/files/libssc.pc \
   "$DEST/usr/share/libssc/libssc.pc"

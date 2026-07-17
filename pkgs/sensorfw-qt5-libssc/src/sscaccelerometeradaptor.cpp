@@ -25,9 +25,12 @@
 #undef emit
 #endif
 
+/* libssc is a C library; force C linkage even if headers omit G_BEGIN_DECLS */
+extern "C" {
 #include <libssc.h>
 #include <glib.h>
 #include <gio/gio.h>
+}
 
 /* m/s² → milli-G (same factor as hybrisaccelerometeradaptor) */
 #ifndef GRAVITY_RECIPROCAL_THOUSANDS

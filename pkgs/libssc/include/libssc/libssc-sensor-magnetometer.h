@@ -23,6 +23,8 @@
 #include <gio/gio.h>
 #include "libssc-sensor.h"
 
+G_BEGIN_DECLS
+
 #define SSC_TYPE_SENSOR_MAGNETOMETER (ssc_sensor_magnetometer_get_type())
 
 typedef struct _SSCSensorMagnetometer {
@@ -41,4 +43,7 @@ void			 ssc_sensor_magnetometer_close (SSCSensorMagnetometer *self, GCancellable
 gboolean		 ssc_sensor_magnetometer_close_finish (SSCSensorMagnetometer *self, GAsyncResult *result, GError **error);
 gboolean                 ssc_sensor_magnetometer_close_sync (SSCSensorMagnetometer *self, GCancellable *cancellable, GError **error);
 
+
+G_END_DECLS
 #endif /* _LIBSSC_SENSOR_MAGNETOMETER_H_ */
+

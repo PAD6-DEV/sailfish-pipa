@@ -23,6 +23,8 @@
 #include <gio/gio.h>
 #include "libssc-sensor.h"
 
+G_BEGIN_DECLS
+
 #define SSC_TYPE_SENSOR_COMPASS (ssc_sensor_compass_get_type())
 
 typedef struct _SSCSensorCompass {
@@ -41,4 +43,7 @@ void			 ssc_sensor_compass_close (SSCSensorCompass *self, GCancellable *cancella
 gboolean		 ssc_sensor_compass_close_finish (SSCSensorCompass *self, GAsyncResult *result, GError **error);
 gboolean                 ssc_sensor_compass_close_sync (SSCSensorCompass *self, GCancellable *cancellable, GError **error);
 
+
+G_END_DECLS
 #endif /* _LIBSSC_SENSOR_COMPASS_H_ */
+

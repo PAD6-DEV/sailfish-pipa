@@ -23,6 +23,8 @@
 #include <gio/gio.h>
 #include "libssc-sensor.h"
 
+G_BEGIN_DECLS
+
 #define SSC_TYPE_SENSOR_PROXIMITY (ssc_sensor_proximity_get_type())
 
 typedef struct _SSCSensorProximity {
@@ -41,4 +43,7 @@ void			 ssc_sensor_proximity_close (SSCSensorProximity *self, GCancellable *canc
 gboolean		 ssc_sensor_proximity_close_finish (SSCSensorProximity *self, GAsyncResult *result, GError **error);
 gboolean		 ssc_sensor_proximity_close_sync (SSCSensorProximity *self, GCancellable *cancellable, GError **error);
 
+
+G_END_DECLS
 #endif /* _LIBSSC_SENSOR_PROXIMITY_H_ */
+

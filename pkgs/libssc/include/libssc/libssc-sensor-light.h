@@ -23,6 +23,8 @@
 #include <gio/gio.h>
 #include "libssc-sensor.h"
 
+G_BEGIN_DECLS
+
 #define SSC_TYPE_SENSOR_LIGHT (ssc_sensor_light_get_type())
 
 typedef struct _SSCSensorLight {
@@ -41,4 +43,7 @@ void		 ssc_sensor_light_close (SSCSensorLight *self, GCancellable *cancellable, 
 gboolean	 ssc_sensor_light_close_finish (SSCSensorLight *self, GAsyncResult *result, GError **error);
 gboolean         ssc_sensor_light_close_sync (SSCSensorLight *self, GCancellable *cancellable, GError **error);
 
+
+G_END_DECLS
 #endif /* _LIBSSC_SENSOR_LIGHT_H_ */
+
