@@ -1,6 +1,6 @@
 Name:           kernel-adaptation-pipa
 Version:        7.1.0
-Release:        3
+Release:        4
 Summary:        Linux kernel for Xiaomi Pad 6 (Sailfish OS)
 License:        GPL-2.0-only
 URL:            https://github.com/PipaDB/linux/tree/pipa/7.1
@@ -31,13 +31,22 @@ cp -a . %{buildroot}/
 test -s %{buildroot}/boot/Image
 test $(stat -c%s %{buildroot}/boot/Image) -ge 1000000
 
+# filesystem owns /boot and /lib; never claim those directory nodes.
+# List only payload paths (same pattern as droid-config-pipa).
+
 %files
 %defattr(-,root,root,-)
-/boot
-/lib/modules
+/boot/Image
+/boot/Image.gz
+/boot/System.map-*
+/boot/config-*
+/boot/dtbs
+/lib/modules/*
 /usr/share/kernel-adaptation-pipa
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-4
+- Do not own /boot (conflicts with filesystem); list payload paths only
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-3
 - Fail staging if zstd modules remain; require panel .ko
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-2
