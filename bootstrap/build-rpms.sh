@@ -29,6 +29,24 @@ rpmbuild -bb --define "_topdir $HOME/rpmbuild" "$HOME/rpmbuild/SPECS/droid-confi
 trap - EXIT
 rm -rf "$PULSE_STAGING"
 
+# policy-settings — OHM configs; Obsoletes ohm-configs-default
+POLICY_STAGING="$(mktemp -d)"
+trap 'rm -rf "$POLICY_STAGING"' EXIT
+mkdir -p "$POLICY_STAGING/etc/dbus-1/system.d"
+cp -a "$DEVICE_SPARSE/etc/ohm" "$POLICY_STAGING/etc/"
+cp -a "$PIPA_SPARSE/etc/ohm/." "$POLICY_STAGING/etc/ohm/"
+if [ -f "$DEVICE_SPARSE/etc/dbus-1/system.d/ohm-policy.conf" ]; then
+  cp -a "$DEVICE_SPARSE/etc/dbus-1/system.d/ohm-policy.conf" "$POLICY_STAGING/etc/dbus-1/system.d/"
+fi
+if [ -f "$PIPA_SPARSE/etc/dbus-1/system.d/ohm-policy.conf" ]; then
+  cp -a "$PIPA_SPARSE/etc/dbus-1/system.d/ohm-policy.conf" "$POLICY_STAGING/etc/dbus-1/system.d/"
+fi
+tar -C "$POLICY_STAGING" -czf "$HOME/rpmbuild/SOURCES/policy-sparse.tar.gz" etc
+cp "$BOOT/rpm/droid-config-pipa-policy-settings.spec" "$HOME/rpmbuild/SPECS/"
+rpmbuild -bb --define "_topdir $HOME/rpmbuild" "$HOME/rpmbuild/SPECS/droid-config-pipa-policy-settings.spec"
+trap - EXIT
+rm -rf "$POLICY_STAGING"
+
 # kernel
 echo "CI placeholder kernel" > "$HOME/rpmbuild/SOURCES/Image"
 cp "$BOOT/rpm/kernel-adaptation-pipa.spec" "$HOME/rpmbuild/SPECS/"

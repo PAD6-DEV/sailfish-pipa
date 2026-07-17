@@ -190,6 +190,7 @@ jobs:
               test -n "$(find repo/adaptation -name "droid-hal-version-pipa-*.noarch.rpm")"
               test -n "$(find repo/adaptation -name "droid-config-pipa-*.noarch.rpm")"
               test -n "$(find repo/adaptation -name "droid-config-pipa-pulseaudio-settings-*.noarch.rpm")"
+              test -n "$(find repo/adaptation -name "droid-config-pipa-policy-settings-*.noarch.rpm")"
               test -n "$(find repo/adaptation -name "patterns-sailfish-device-configuration-pipa-*.noarch.rpm")"
               createrepo_c repo/adaptation || createrepo repo/adaptation
             '
@@ -199,8 +200,10 @@ jobs:
           test -n "$(find repo/adaptation -name "droid-hal-version-pipa-*.noarch.rpm")"
           test -n "$(find repo/adaptation -name "droid-config-pipa-*.noarch.rpm")"
           test -n "$(find repo/adaptation -name "droid-config-pipa-pulseaudio-settings-*.noarch.rpm")"
+          test -n "$(find repo/adaptation -name "droid-config-pipa-policy-settings-*.noarch.rpm")"
           test -n "$(find repo/adaptation -name "patterns-sailfish-device-configuration-pipa-*.noarch.rpm")"
           ls -lh repo/adaptation
+          rpm -qp --obsoletes repo/adaptation/droid-config-pipa-policy-settings-*.noarch.rpm | grep -F ohm-configs-default
       - uses: actions/upload-artifact@v4
         with:
           name: pub-adaptation

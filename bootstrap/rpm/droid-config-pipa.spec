@@ -1,6 +1,6 @@
 Name:           droid-config-pipa
 Version:        0.1.5
-Release:        4
+Release:        5
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
 BuildArch:      noarch
@@ -51,8 +51,12 @@ rm -rf %{buildroot}/var/lib/environment/usb-moded
 %exclude /etc/pulse
 %exclude /etc/sysconfig/pulseaudio
 %exclude /var/lib/nemo-pulseaudio-parameters
+%exclude /etc/ohm
+%exclude /etc/dbus-1/system.d/ohm-policy.conf
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-5
+- Move OHM configs to droid-config-pipa-policy-settings (Obsolete ohm-configs-default)
 * Fri Jul 17 2026 Porter <porter@local> - 0.1.5-4
 - Ship HDMI_pipa.conf and point Xiaomi Pad 6 UCM at it; SSU adaptation repo keys
 * Fri Jul 17 2026 Porter <porter@local> - 0.1.5-3
