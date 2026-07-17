@@ -149,7 +149,8 @@ inject_bringup_fixes() {
     # Drop stock llvmpipe packages that Conflict with mesa-pipa.
     rpm --root "$dest" -qa 'mesa-llvmpipe*' 2>/dev/null \
       | xargs -r rpm --root "$dest" -e --nodeps || true
-    rpm --root "$dest" -Uvh --force --nodeps "$rpm_file"
+    # Flash packing runs on x86 CI hosts; allow aarch64 RPMs into the rootfs tree.
+    rpm --root "$dest" -Uvh --force --nodeps --ignorearch "$rpm_file"
   fi
   rpm --root "$dest" -q mesa-pipa
   test -e "$dest/usr/lib64/dri/msm_dri.so"

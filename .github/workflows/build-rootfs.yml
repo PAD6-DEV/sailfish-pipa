@@ -127,7 +127,7 @@ jobs:
                 echo "WARN: mic rootfs lacks mesa-pipa — injecting from repo/adaptation" >&2
                 rpm --root "$root" -qa 'mesa-llvmpipe*' 2>/dev/null \
                   | xargs -r rpm --root "$root" -e --nodeps || true
-                rpm --root "$root" -Uvh --force --nodeps /sailfish-pipa/repo/adaptation/mesa-pipa*.rpm
+                rpm --root "$root" -Uvh --force --nodeps --ignorearch /sailfish-pipa/repo/adaptation/mesa-pipa*.rpm
                 (cd "$pack_cwd" && tar -cjf "$TBZ" "$pack_src")
               fi
               rpm --root "$root" -q mesa-pipa
