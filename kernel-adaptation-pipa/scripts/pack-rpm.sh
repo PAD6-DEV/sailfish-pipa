@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="${1:-${KERNEL_PKG:-https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.0-1-aarch64.pkg.tar.xz}}"
+SRC="${1:-${KERNEL_PKG:-https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.0-2-aarch64.pkg.tar.xz}}"
 OUT="${KERNEL_ADAPT_OUT:-$ROOT/out}"
 STAGE="$ROOT/prebuilt"
 

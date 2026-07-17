@@ -36,7 +36,7 @@ env:
   SDK_IMAGE: coderus/sailfishos-platform-sdk-base:4.6.0.13
   MESA_SDK_IMAGE: coderus/sailfishos-platform-sdk:5.0.0.43
   SFOS_SDK_RELEASE: "5.0.0.43"
-  KERNEL_PKG_URL: https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.0-1-aarch64.pkg.tar.xz
+  KERNEL_PKG_URL: https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.0-2-aarch64.pkg.tar.xz
   PAGES_BASE: https://pad6-dev.github.io/sailfish-pipa
 
 jobs:
@@ -359,8 +359,9 @@ jobs:
           tmp=$(mktemp -d)
           rpm2cpio kernel-adaptation-pipa/out/kernel-adaptation-pipa-7*.rpm | (cd "$tmp" && cpio -idm --quiet)
           test "$(wc -c < "$tmp/boot/Image")" -ge 1000000
-          # Panel driver must be plain .ko (not .ko.zst) for SFOS kmod
-          find "$tmp/lib/modules" -name 'panel-novatek-nt36532.ko' | grep -q .
+          # Panel must be builtin (modules.builtin) or plain .ko (not .ko.zst)
+          ( find "$tmp/lib/modules" -name 'panel-novatek-nt36532.ko' | grep -q . \
+            || grep -q 'panel-novatek-nt36532' "$tmp"/lib/modules/*/modules.builtin )
           ! find "$tmp/lib/modules" -name 'panel-novatek-nt36532.ko.zst' | grep -q .
           rm -rf "$tmp"
       - name: Pack mesa-pipa RPM

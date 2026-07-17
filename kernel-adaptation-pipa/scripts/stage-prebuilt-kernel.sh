@@ -70,7 +70,7 @@ elif [ -d "$SRC/lib/modules" ]; then
 fi
 
 # Sailfish kmod does not load CONFIG_MODULE_COMPRESS_ZSTD (.ko.zst).
-# Decompress in place so panel/DRM modules can load without an initramfs.
+# Decompress in place when modules are still modular.
 # Fail hard: a soft warn previously shipped unbroken .ko.zst and blanked the panel.
 if [ -d "$DEST/lib/modules" ]; then
   if ! command -v zstd >/dev/null 2>&1; then
@@ -86,8 +86,11 @@ if [ -d "$DEST/lib/modules" ]; then
     echo "ERROR: $leftover .ko.zst modules remain after decompress" >&2
     exit 1
   fi
-  if ! find "$DEST/lib/modules" -name 'panel-novatek-nt36532.ko' | grep -q .; then
-    echo "ERROR: panel-novatek-nt36532.ko missing after staging" >&2
+  # linux-pipa >= 7.1.0-2 builds the panel into the Image; older packages
+  # ship it as panel-novatek-nt36532.ko (must be plain, not .zst).
+  if ! find "$DEST/lib/modules" -name 'panel-novatek-nt36532.ko' | grep -q . \
+    && ! grep -q 'panel-novatek-nt36532' "$DEST"/lib/modules/*/modules.builtin 2>/dev/null; then
+    echo "ERROR: panel-novatek-nt36532 missing (neither .ko nor modules.builtin)" >&2
     exit 1
   fi
 fi
