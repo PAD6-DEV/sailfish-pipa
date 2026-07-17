@@ -1,6 +1,6 @@
 Name:           droid-config-pipa
 Version:        0.1.5
-Release:        9
+Release:        10
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
 BuildArch:      noarch
@@ -42,6 +42,8 @@ elif [ -f boot/extlinux/extlinux.conf ]; then
 fi
 # jolla-rnd-device owns usb-moded-args.conf; -r comes from systemd drop-in
 rm -rf %{buildroot}/var/lib/environment/usb-moded
+# Never ship jolla-camera.desktop — it is owned by jolla-camera. Wrap via trigger.
+rm -f %{buildroot}/usr/share/applications/jolla-camera.desktop
 
 # Do not package directory nodes owned by filesystem (/, /boot, /etc, …)
 # List only payload prefixes so we never conflict on /boot itself.
@@ -58,7 +60,22 @@ rm -rf %{buildroot}/var/lib/environment/usb-moded
 %exclude /etc/ohm
 %exclude /etc/dbus-1/system.d/ohm-policy.conf
 
+# Wrap Camera with libcamerify without owning jolla-camera's desktop file.
+%triggerin -- jolla-camera
+DESKTOP=/usr/share/applications/jolla-camera.desktop
+if [ -f "$DESKTOP" ] && ! grep -qF 'libcamerify' "$DESKTOP"; then
+  sed -i 's|^Exec=.*|Exec=/usr/bin/invoker --type=silica-media,silica-qt5 -A -- /usr/bin/libcamerify /usr/bin/jolla-camera|' "$DESKTOP" || :
+fi
+
+%posttrans
+DESKTOP=/usr/share/applications/jolla-camera.desktop
+if [ -f "$DESKTOP" ] && ! grep -qF 'libcamerify' "$DESKTOP"; then
+  sed -i 's|^Exec=.*|Exec=/usr/bin/invoker --type=silica-media,silica-qt5 -A -- /usr/bin/libcamerify /usr/bin/jolla-camera|' "$DESKTOP" || :
+fi
+
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-10
+- Wrap jolla-camera via RPM trigger instead of conflicting .desktop file
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-9
 - Point sensorfw at sscaccelerometeradaptor; wait for hexagonrpcd
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-8

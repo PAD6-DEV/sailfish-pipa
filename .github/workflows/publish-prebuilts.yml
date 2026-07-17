@@ -257,6 +257,12 @@ jobs:
         with:
           path: pkgs/libcamera/out
           key: libcamera-${{ hashFiles('pkgs/libcamera/build-in-sdk.sh', 'pkgs/libcamera/rpm/**', 'pkgs/libcamera/patches/**', 'pkgs/libcamera/files/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
+      - name: Cache plymouth-lite RPMs
+        id: cache-plymouth
+        uses: actions/cache@v4
+        with:
+          path: pkgs/plymouth-lite/out
+          key: plymouth-lite-${{ hashFiles('pkgs/plymouth-lite/build-in-sdk.sh', 'pkgs/plymouth-lite/rpm/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
       - name: Cache firmware-pipa RPM
         id: cache-fw-rpm
         uses: actions/cache@v4
@@ -316,6 +322,15 @@ jobs:
           test -n "$(find pkgs/libcamera/out -name 'libcamera-ipa*.rpm')"
           test -n "$(find pkgs/libcamera/out -name 'libcamera-tools*.rpm')"
           test -n "$(find pkgs/libcamera/out -name 'gstreamer1.0-plugin-libcamera*.rpm')"
+      - name: Build plymouth-lite (SFOS SDK sb2)
+        if: steps.cache-plymouth.outputs.cache-hit != 'true'
+        run: |
+          set -eux
+          chmod +x pkgs/plymouth-lite/build-in-sdk.sh
+          SFOS_SDK_RELEASE="$SFOS_SDK_RELEASE" SDK_IMAGE="$MESA_SDK_IMAGE" \
+            bash pkgs/plymouth-lite/build-in-sdk.sh
+          test -n "$(find pkgs/plymouth-lite/out -name 'plymouth-lite-0*.rpm')"
+          test -n "$(find pkgs/plymouth-lite/out -name 'plymouth-lite-theme-default*.rpm')"
       - name: Pack firmware-pipa RPM
         if: steps.cache-fw-rpm.outputs.cache-hit != 'true'
         run: |
@@ -344,10 +359,13 @@ jobs:
           test -n "$(find pkgs/sensorfw-qt5-libssc/out -name 'sensorfw-qt5-libssc*.rpm')"
           test -n "$(find pkgs/libcamera/out -name 'libcamera-0*.rpm')"
           test -n "$(find pkgs/libcamera/out -name 'gstreamer1.0-plugin-libcamera*.rpm')"
+          test -n "$(find pkgs/plymouth-lite/out -name 'plymouth-lite-0*.rpm')"
+          test -n "$(find pkgs/plymouth-lite/out -name 'plymouth-lite-theme-default*.rpm')"
           test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
           test -n "$(find pkgs/mesa-pipa/out -name 'mesa-pipa*.rpm')"
           rpm -qp --provides pkgs/mesa-pipa/out/mesa-pipa*.rpm | grep -F 'libGLESv2.so.2()(64bit)'
-          ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/libssc/out pkgs/sensorfw-qt5-libssc/out pkgs/libcamera/out pkgs/firmware-pipa/out pkgs/mesa-pipa/out
+          rpm -qp --provides pkgs/plymouth-lite/out/plymouth-lite-theme-default*.rpm | grep -F boot-splash-screen
+          ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/libssc/out pkgs/sensorfw-qt5-libssc/out pkgs/libcamera/out pkgs/plymouth-lite/out pkgs/firmware-pipa/out pkgs/mesa-pipa/out
       - uses: actions/upload-artifact@v4
         with:
           name: pub-pkgs
@@ -357,6 +375,7 @@ jobs:
             pkgs/libssc/out/*.rpm
             pkgs/sensorfw-qt5-libssc/out/*.rpm
             pkgs/libcamera/out/*.rpm
+            pkgs/plymouth-lite/out/*.rpm
             pkgs/firmware-pipa/out/*.rpm
             pkgs/mesa-pipa/out/*.rpm
           if-no-files-found: error

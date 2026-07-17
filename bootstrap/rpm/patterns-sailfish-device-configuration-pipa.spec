@@ -6,8 +6,7 @@ License:        BSD
 BuildArch:      noarch
 
 # Mirror droid-config-pinetab2 configuration pattern (dont_be_evil-ci).
-# Splash (yamuisplash) belongs on patterns-sailfish-device-adaptation-pipa
-# (droid-config-pipa/patterns/patterns-sailfish-device-adaptation-pipa.inc).
+# Splash packages belong on patterns-sailfish-device-adaptation-pipa.
 Requires:       patterns-sailfish-ui
 Requires:       patterns-sailfish-applications
 Requires:       patterns-sailfish-consumer-generic

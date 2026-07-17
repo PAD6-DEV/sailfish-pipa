@@ -10,7 +10,7 @@ Requires: wayland-egl
 Requires: qt5-plugin-platform-eglfs
 Requires: mtdev
 
-# Splash screen
+# Splash screen — built from sailfishos/plymouth-lite into our adaptation repo
 Requires: plymouth-lite
 Requires: plymouth-lite-theme-default
 
