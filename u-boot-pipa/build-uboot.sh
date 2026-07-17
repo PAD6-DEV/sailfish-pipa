@@ -64,7 +64,7 @@ replacements = {
         # rootfs; quiet/splash blanks the panel when DRM starts without the driver.
         "setenv bootargs root=PARTLABEL=linux rw rootwait "
         "console=tty0 console=ttyMSM0,115200n8 earlycon ignore_loglevel "
-        "clk_ignore_unused pd_ignore_unused cma=128M; "
+        "clk_ignore_unused pd_ignore_unused cma=256M; "
         "booti ${kernel_addr_r} - ${fdt_addr_r}; "
         "else "
         "echo \"Sailfish: cannot load /boot/Image from GPT linux "

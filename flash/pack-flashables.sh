@@ -110,7 +110,7 @@ DEFAULT sailfish
 LABEL sailfish
   KERNEL /boot/Image
   FDT /boot/dtbs/qcom/sm8250-xiaomi-pipa.dtb
-  APPEND root=PARTLABEL=linux rw rootwait console=tty0 console=ttyMSM0,115200n8 earlycon
+  APPEND root=PARTLABEL=linux rw rootwait console=tty0 console=ttyMSM0,115200n8 earlycon ignore_loglevel clk_ignore_unused pd_ignore_unused cma=256M
 EOF
   fi
 

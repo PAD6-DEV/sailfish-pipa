@@ -1,0 +1,5 @@
+# Allow video group to allocate from dma-buf heaps (libcamera).
+# Prefer an explicit ln for linux,cma: some udev builds mishandle SYMLINK+
+# with a comma in the name.
+SUBSYSTEM=="dma_heap", KERNEL=="default_cma_region", GROUP="video", MODE="0660", RUN+="/bin/ln -sfn default_cma_region /dev/dma_heap/linux,cma"
+SUBSYSTEM=="dma_heap", KERNEL=="reserved", GROUP="video", MODE="0660"
