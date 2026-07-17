@@ -63,6 +63,9 @@ if [ ! -f "$DEST/boot/Image" ]; then
   fi
 fi
 
+# Drop Arch linux-pipa vmlinuz-* aliases; Sailfish/U-Boot boot /boot/Image.
+rm -f "$DEST"/boot/vmlinuz-*
+
 if [ -d "$SRC/usr/lib/modules" ]; then
   cp -a "$SRC/usr/lib/modules" "$DEST/lib/modules"
 elif [ -d "$SRC/lib/modules" ]; then
