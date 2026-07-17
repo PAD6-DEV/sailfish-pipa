@@ -11,15 +11,23 @@
 
 #include "config.h"
 #include "datatypes/utils.h"
-#include "logging.h"
+
+#include <QDebug>
+
+/* Qt's signals/slots macros clash with GLib GDBusSignalInfo::signals */
+#ifdef signals
+#undef signals
+#endif
+#ifdef slots
+#undef slots
+#endif
+#ifdef emit
+#undef emit
+#endif
 
 #include <libssc.h>
-
 #include <glib.h>
 #include <gio/gio.h>
-
-#include <QCoreApplication>
-#include <QDebug>
 
 /* m/s² → milli-G (same factor as hybrisaccelerometeradaptor) */
 #ifndef GRAVITY_RECIPROCAL_THOUSANDS
@@ -89,8 +97,8 @@ bool SscAccelerometerAdaptor::startSensor()
     GError *error = nullptr;
     sensor_ = ssc_sensor_accelerometer_new_sync(nullptr, &error);
     if (!sensor_) {
-        qCWarning(lcSensorFw) << id() << "ssc_sensor_accelerometer_new_sync failed:"
-                              << (error ? error->message : "unknown");
+        qWarning() << id() << "ssc_sensor_accelerometer_new_sync failed:"
+                   << (error ? error->message : "unknown");
         if (error)
             g_error_free(error);
         return false;
@@ -101,8 +109,8 @@ bool SscAccelerometerAdaptor::startSensor()
                                              this);
 
     if (!ssc_sensor_accelerometer_open_sync(sensor_, nullptr, &error)) {
-        qCWarning(lcSensorFw) << id() << "ssc_sensor_accelerometer_open_sync failed:"
-                              << (error ? error->message : "unknown");
+        qWarning() << id() << "ssc_sensor_accelerometer_open_sync failed:"
+                   << (error ? error->message : "unknown");
         if (error)
             g_error_free(error);
         if (measurementHandlerId_) {
@@ -115,7 +123,7 @@ bool SscAccelerometerAdaptor::startSensor()
     }
 
     sensorOpen_ = true;
-    qCInfo(lcSensorFw) << id() << "SSC accelerometer started";
+    qInfo() << id() << "SSC accelerometer started";
     return true;
 }
 
@@ -128,7 +136,7 @@ void SscAccelerometerAdaptor::stopSensor()
         GError *error = nullptr;
         ssc_sensor_accelerometer_close_sync(sensor_, nullptr, &error);
         if (error) {
-            qCWarning(lcSensorFw) << id() << "ssc close:" << error->message;
+            qWarning() << id() << "ssc close:" << error->message;
             g_error_free(error);
         }
         sensorOpen_ = false;
@@ -140,7 +148,7 @@ void SscAccelerometerAdaptor::stopSensor()
     }
     g_object_unref(sensor_);
     sensor_ = nullptr;
-    qCInfo(lcSensorFw) << id() << "SSC accelerometer stopped";
+    qInfo() << id() << "SSC accelerometer stopped";
 }
 
 void SscAccelerometerAdaptor::pumpGlib()

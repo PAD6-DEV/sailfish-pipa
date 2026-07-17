@@ -7,11 +7,12 @@
 #include "sscaccelerometeradaptorplugin.h"
 #include "sscaccelerometeradaptor.h"
 #include "sensormanager.h"
-#include "logging.h"
+
+#include <QDebug>
 
 void SscAccelerometerAdaptorPlugin::Register(class Loader &)
 {
-    qCInfo(lcSensorFw) << "registering sscaccelerometeradaptor";
+    qInfo() << "registering sscaccelerometeradaptor";
     SensorManager &sm = SensorManager::instance();
     sm.registerDeviceAdaptor<SscAccelerometerAdaptor>("accelerometeradaptor");
 }
