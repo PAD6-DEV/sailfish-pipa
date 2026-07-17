@@ -1,6 +1,6 @@
 Name:           droid-config-pipa-pulseaudio-settings
 Version:        0.1.5
-Release:        1
+Release:        2
 Summary:        PulseAudio settings for Xiaomi Pad 6 (pipa)
 License:        BSD
 BuildArch:      noarch
@@ -12,7 +12,8 @@ Requires:       pulseaudio >= 11.1+git4
 Requires:       pulseaudio-modules-nemo-parameters >= 11.1.24
 Requires:       pulseaudio-modules-nemo-stream-restore >= 11.1.24
 Requires:       pulseaudio-modules-nemo-mainvolume >= 11.1.24
-Requires:       pulseaudio-modules-droid >= 11.1.66
+# native mainline (not hybris) — match droid-configs.inc %if native_build
+Requires:       pulseaudio-module-keepalive
 Requires:       pulseaudio-policy-enforcement >= 11.1.35
 
 %description
@@ -41,5 +42,7 @@ fi
 /var/lib/nemo-pulseaudio-parameters
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-2
+- Native build: require pulseaudio-module-keepalive, not pulseaudio-modules-droid
 * Fri Jul 17 2026 Porter <porter@local> - 0.1.5-1
 - Bootstrap subpackage: pulse config + nemo-pulseaudio-parameters from device-common
