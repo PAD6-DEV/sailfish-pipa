@@ -1,6 +1,6 @@
 Name:           droid-config-pipa
 Version:        0.1.5
-Release:        6
+Release:        7
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
 BuildArch:      noarch
@@ -9,6 +9,10 @@ Source0:        sparse.tar.gz
 Requires:       openssh-server
 Requires:       kmod
 Requires:       usb-moded
+# Ship UCM toplevel (ucm.conf); SFOS device images often lack alsa-ucm-conf.
+Provides:       alsa-ucm-conf
+Obsoletes:      alsa-ucm-conf
+Conflicts:      alsa-ucm-conf
 
 %description
 Sparse overlays and services for Xiaomi Pad 6 Sailfish OS port.
@@ -55,6 +59,8 @@ rm -rf %{buildroot}/var/lib/environment/usb-moded
 %exclude /etc/dbus-1/system.d/ohm-policy.conf
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-7
+- Restore ucm.conf/generic.conf so Pulse can open sm8250 UCM (null-sink fix)
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-6
 - Add oneshot to clean broken SSU adaptation repo stubs on boot
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-5
