@@ -1,0 +1,14 @@
+[Unit]
+Description=Android persist partition (SSC sensor registry)
+Before=hexagonrpcd-sdsp.service
+ConditionPathExists=/dev/disk/by-partlabel/persist
+
+[Mount]
+What=/dev/disk/by-partlabel/persist
+Where=/mnt/vendor/persist
+Type=ext4
+Options=rw,noatime,nosuid,nodev
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=hexagonrpcd-sdsp.service
