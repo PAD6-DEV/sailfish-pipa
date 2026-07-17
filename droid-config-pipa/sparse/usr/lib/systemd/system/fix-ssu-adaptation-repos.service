@@ -1,0 +1,12 @@
+[Unit]
+Description=Remove broken SSU adaptation-xiaomi-pipa repo stubs
+After=local-fs.target
+Before=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/droid/fix-ssu-adaptation-repos.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

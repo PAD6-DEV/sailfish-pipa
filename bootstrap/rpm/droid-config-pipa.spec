@@ -1,6 +1,6 @@
 Name:           droid-config-pipa
 Version:        0.1.5
-Release:        5
+Release:        6
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
 BuildArch:      noarch
@@ -55,6 +55,8 @@ rm -rf %{buildroot}/var/lib/environment/usb-moded
 %exclude /etc/dbus-1/system.d/ohm-policy.conf
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-6
+- Add oneshot to clean broken SSU adaptation repo stubs on boot
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-5
 - Move OHM configs to droid-config-pipa-policy-settings (Obsolete ohm-configs-default)
 * Fri Jul 17 2026 Porter <porter@local> - 0.1.5-4
