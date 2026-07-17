@@ -32,6 +32,7 @@ LEGACY_UEFI="${LEGACY_UEFI:-0}"
 EXISTING_ROOTFS_RAW=""
 MTDEV_SO="${MTDEV_SO:-}"
 FIRMWARE_TAR="${FIRMWARE_TAR:-$REPO_ROOT/firmware-pipa/out/xiaomi-pipa-firmware.tar.gz}"
+MESA_RPM="${MESA_RPM:-}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -43,7 +44,8 @@ while [ $# -gt 0 ]; do
     --rootfs-size-mb) ROOTFS_SIZE_MB="$2"; shift 2 ;;
     --target-part) TARGET_PART="$2"; shift 2 ;;
     --mtdev-so) MTDEV_SO="$2"; shift 2 ;;
-    --mesa-tar) echo "WARN: --mesa-tar is ignored; Mesa is installed via mesa-pipa RPM" >&2; shift 2 ;;
+    --mesa-tar) echo "WARN: --mesa-tar is ignored; use --mesa-rpm" >&2; shift 2 ;;
+    --mesa-rpm) MESA_RPM="$2"; shift 2 ;;
     --firmware-tar) FIRMWARE_TAR="$2"; shift 2 ;;
     *) echo "Unknown arg: $1" >&2; exit 1 ;;
   esac
@@ -123,12 +125,33 @@ EOF
 
 inject_bringup_fixes() {
   local dest="$1"
-  # Mesa/freedreno must come from the mesa-pipa RPM in the rootfs. Do not overlay
-  # the raw tarball here, otherwise rpm ownership still shows llvmpipe.
-  if command -v rpm >/dev/null 2>&1 && ! rpm --root "$dest" -q mesa-pipa >/dev/null 2>&1; then
-    echo "ERROR: mesa-pipa is not installed in rootfs — GPU would fall back to llvmpipe" >&2
+  # Mesa/freedreno must come from the mesa-pipa RPM. mic sometimes keeps
+  # stock mesa-llvmpipe despite the pattern Requires — install/replace here.
+  if ! command -v rpm >/dev/null 2>&1; then
+    echo "ERROR: rpm required to verify/install mesa-pipa" >&2
     exit 1
   fi
+  if ! rpm --root "$dest" -q mesa-pipa >/dev/null 2>&1; then
+    local rpm_file="$MESA_RPM"
+    if [ -z "$rpm_file" ] || [ ! -f "$rpm_file" ]; then
+      rpm_file=$(find \
+        "$REPO_ROOT/repo/adaptation" \
+        "$REPO_ROOT/pkgs/mesa-pipa/out" \
+        "$REPO_ROOT/artifacts-rootfs" \
+        -name 'mesa-pipa*.rpm' 2>/dev/null | head -1 || true)
+    fi
+    if [ -z "$rpm_file" ] || [ ! -f "$rpm_file" ]; then
+      echo "ERROR: mesa-pipa is not installed in rootfs and no mesa-pipa RPM was found" >&2
+      echo "  Pass --mesa-rpm /path/to/mesa-pipa.rpm or put it in repo/adaptation/" >&2
+      exit 1
+    fi
+    echo "Installing mesa-pipa from $rpm_file (was missing from mic rootfs)"
+    # Drop stock llvmpipe packages that Conflict with mesa-pipa.
+    rpm --root "$dest" -qa 'mesa-llvmpipe*' 2>/dev/null \
+      | xargs -r rpm --root "$dest" -e --nodeps || true
+    rpm --root "$dest" -Uvh --force --nodeps "$rpm_file"
+  fi
+  rpm --root "$dest" -q mesa-pipa
   test -e "$dest/usr/lib64/dri/msm_dri.so"
 
   # Device firmware (GPU zap + Novatek touch, …)

@@ -1,6 +1,6 @@
 Name:           mesa-pipa
 Version:        24.1.7
-Release:        3
+Release:        4
 Summary:        Mesa freedreno/msm for Xiaomi Pad 6 (Sailfish OS aarch64)
 License:        MIT
 URL:            https://www.mesa3d.org/
@@ -45,14 +45,8 @@ Obsoletes:      mesa-llvmpipe-libgbm
 Obsoletes:      mesa-llvmpipe-libglapi
 Obsoletes:      mesa-llvmpipe-libGL
 Obsoletes:      mesa-llvmpipe-dri-drivers
-
-Conflicts:      mesa-llvmpipe-libEGL
-Conflicts:      mesa-llvmpipe-libGLESv1
-Conflicts:      mesa-llvmpipe-libGLESv2
-Conflicts:      mesa-llvmpipe-libgbm
-Conflicts:      mesa-llvmpipe-libglapi
-Conflicts:      mesa-llvmpipe-libGL
-Conflicts:      mesa-llvmpipe-dri-drivers
+# No Conflicts: — Conflicts + Requires from UI patterns can make mic keep
+# stock mesa-llvmpipe and skip mesa-pipa. Obsoletes alone is enough to replace.
 
 # Runtime deps (libdrm, wayland, zlib, expat) come from SFOS base + pattern.
 
@@ -80,6 +74,8 @@ rm -rf %{buildroot}/usr/include \
 /usr
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 24.1.7-4
+- Drop Conflicts on mesa-llvmpipe so mic can replace stock Mesa via Obsoletes
 * Fri Jul 17 2026 Porter <porter@local> - 24.1.7-3
 - Provide Mesa sonames required by Qt and system GL users
 * Fri Jul 17 2026 Porter <porter@local> - 24.1.7-2

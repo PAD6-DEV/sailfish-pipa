@@ -103,6 +103,36 @@ jobs:
               source pipa/pipa.env
               export WORKING_DIRECTORY=pipa
               ./run-mic.sh
+              # If mic left stock llvmpipe, inject mesa-pipa into the rootfs tarball
+              # so pack-flashables and device images always have freedreno.
+              TBZ=$(ls -1 "$PWD"/pipa/sfe-*/sfe-*.tar.bz2 | head -1)
+              test -s "$TBZ"
+              tmp=$(mktemp -d)
+              tar -xjf "$TBZ" -C "$tmp"
+              if [ -d "$tmp/rootfs/usr" ]; then
+                root="$tmp/rootfs"
+                pack_cwd="$tmp"
+                pack_src="rootfs"
+              elif [ -d "$tmp/usr" ]; then
+                root="$tmp"
+                pack_cwd="$tmp"
+                pack_src="."
+              else
+                root=$(find "$tmp" -mindepth 1 -maxdepth 3 -type d -name bin -printf '%h\n' | head -1)
+                pack_cwd=$(dirname "$root")
+                pack_src=$(basename "$root")
+              fi
+              test -n "$root" && test -d "$root/usr"
+              if ! rpm --root "$root" -q mesa-pipa >/dev/null 2>&1; then
+                echo "WARN: mic rootfs lacks mesa-pipa — injecting from repo/adaptation" >&2
+                rpm --root "$root" -qa 'mesa-llvmpipe*' 2>/dev/null \
+                  | xargs -r rpm --root "$root" -e --nodeps || true
+                rpm --root "$root" -Uvh --force --nodeps /sailfish-pipa/repo/adaptation/mesa-pipa*.rpm
+                (cd "$pack_cwd" && tar -cjf "$TBZ" "$pack_src")
+              fi
+              rpm --root "$root" -q mesa-pipa
+              test -e "$root/usr/lib64/dri/msm_dri.so"
+              rm -rf "$tmp"
             '
 
       - name: Upload rootfs tarball
@@ -159,12 +189,25 @@ jobs:
           set -eux
           mkdir -p flash/out
           chmod +x flash/pack-flashables.sh
+          MESA_RPM=$(find artifacts-rootfs repo/adaptation pkgs/mesa-pipa/out \
+            -name 'mesa-pipa*.rpm' 2>/dev/null | head -1 || true)
+          if [ -z "$MESA_RPM" ]; then
+            mkdir -p pkgs/mesa-pipa/out mesa-pipa/out
+            wget -q --show-progress -O mesa-pipa/out/mesa-freedreno-sfos-aarch64.tar.gz \
+              "${PREBUILTS_BASE}/mesa-freedreno-sfos-aarch64.tar.gz"
+            chmod +x pkgs/mesa-pipa/pack-rpm.sh
+            sudo apt-get install -y -qq rpm
+            bash pkgs/mesa-pipa/pack-rpm.sh
+            MESA_RPM=$(find pkgs/mesa-pipa/out -name 'mesa-pipa*.rpm' | head -1)
+          fi
+          test -s "$MESA_RPM"
           sudo TARGET_PART=linux \
             bash flash/pack-flashables.sh \
             --rootfs-tbz "$TBZ" \
             --kernel-prebuilt "$GITHUB_WORKSPACE/kernel-adaptation-pipa/prebuilt" \
             --uboot-img "$GITHUB_WORKSPACE/u-boot-pipa/out/u-boot-xiaomi-pipa.img" \
             --firmware-tar "$GITHUB_WORKSPACE/firmware-pipa/out/xiaomi-pipa-firmware.tar.gz" \
+            --mesa-rpm "$MESA_RPM" \
             --outdir "$GITHUB_WORKSPACE/flash/out" \
             --target-part linux
           ls -lh flash/out
