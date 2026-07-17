@@ -66,20 +66,21 @@ mkdir -p "$DEST" "$OUT" "$HOST_OUT" "$WORK/src"
 
 sb2 -t "$TARGET" true
 
-# Required build deps — must succeed. Keep optional packages out of this
-# transaction so a missing libevent-devel cannot roll back everything.
+# Package names vary across SFOS images (some resolve only as capabilities,
+# some are preinstalled and unlisted). Install best-effort, then hard-verify
+# the actual toolchain/pkg-config modules we need below. Never let a single
+# unknown package name abort the whole transaction.
 sb2_install gcc gcc-c++ make binutils pkgconfig ninja git curl tar \
-  xz gzip cmake python3 openssl \
-  openssl-devel libdrm-devel libyaml-devel libelf-devel \
+  xz gzip cmake openssl \
+  openssl-devel libdrm-devel libyaml-devel \
   libjpeg-turbo-devel libtiff-devel \
   gstreamer1.0-devel gstreamer1.0-plugins-base-devel \
-  glib2-devel libudev-devel zlib-devel
+  glib2-devel zlib-devel || true
 
-# Capability-style names (SFOS prefers these for .pc providers)
+# Capability-style names (SFOS prefers these for -devel / .pc providers)
 sb2_install \
   pkgconfig\(libdrm\) \
   pkgconfig\(yaml-0.1\) \
-  pkgconfig\(libelf\) \
   pkgconfig\(libjpeg\) \
   pkgconfig\(libtiff-4\) \
   pkgconfig\(gstreamer-1.0\) \
@@ -89,27 +90,47 @@ sb2_install \
   pkgconfig\(glib-2.0\) \
   pkgconfig\(libudev\) \
   pkgconfig\(libcrypto\) \
-  pkgconfig\(openssl\)
+  pkgconfig\(openssl\) || true
 
-# Optional: cam CLI only
+# Optional extras (libelf for backtraces, libevent for the cam CLI)
+sb2_install libelf-devel pkgconfig\(libelf\) || true
 sb2_install libevent-devel pkgconfig\(libevent_pthreads\) || true
+
+require_cmd() {
+  local cmd="$1"
+  if ! sb2_t bash -lc "command -v $cmd >/dev/null 2>&1"; then
+    echo "ERROR: missing build tool: $cmd" >&2
+    return 1
+  fi
+  echo "OK tool: $cmd"
+}
 
 require_pc() {
   local pc="$1"
   if ! sb2_t pkg-config --exists "$pc"; then
     echo "ERROR: missing pkg-config module: $pc" >&2
-    sb2_t bash -lc "pkg-config --list-all 2>/dev/null | grep -iE 'gst|ssl|crypto|yaml|event' || true" >&2 || true
+    sb2_t bash -lc "pkg-config --list-all 2>/dev/null | grep -iE 'gst|ssl|crypto|yaml|udev|event' || true" >&2 || true
     return 1
   fi
   echo "OK pkg-config: $pc ($(sb2_t pkg-config --modversion "$pc"))"
 }
 
-require_pc libcrypto || require_pc openssl
+# Hard requirements — fail early with a clear message if anything is absent.
+require_cmd gcc
+require_cmd g++
+require_cmd make
+require_cmd ninja
+require_cmd cmake
+require_cmd python3
+require_cmd pkg-config
+
 require_pc gstreamer-1.0
 require_pc gstreamer-video-1.0
 require_pc glib-2.0
 require_pc libudev
-require_pc yaml-0.1 || true
+require_pc libcrypto || require_pc openssl
+# libcamera bundles a yaml wrap subproject, so system yaml is only preferred.
+require_pc yaml-0.1 || echo "note: using bundled yaml subproject"
 
 # cam needs libevent_pthreads; SFOS often lacks it — keep libcamerify either way.
 CAM_OPT=disabled
