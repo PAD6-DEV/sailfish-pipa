@@ -1,31 +1,28 @@
 Name:           kernel-adaptation-pipa
-Version:        6.14.0
-Release:        1
-Summary:        Linux kernel artifacts for Xiaomi Pad 6 (placeholder/prebuilt)
+Version:        7.1.0
+Release:        0.placeholder
+Summary:        DO NOT BUILD — use kernel-adaptation-pipa/scripts/pack-rpm.sh
 License:        GPL-2.0-only
 BuildArch:      noarch
-Source0:        Image
+
+# This bootstrap stub used to install a few-byte /boot/Image that zypper then
+# overwrote a working kernel with (black screen after U-Boot). The real RPM is
+# built by kernel-adaptation-pipa/scripts/pack-rpm.sh from linux-pipa.
 
 %description
-CI/bootstrap kernel package. Replaced by real Image+modules when staged.
+Placeholder removed. Build the real package with:
+  KERNEL_PKG=... bash kernel-adaptation-pipa/scripts/pack-rpm.sh
 
 %prep
+echo "Refusing to build placeholder kernel-adaptation-pipa" >&2
+exit 1
 
 %build
 
 %install
-mkdir -p %{buildroot}/boot %{buildroot}/usr/share/kernel-adaptation-pipa
-if [ -f %{SOURCE0} ]; then
-  install -m 644 %{SOURCE0} %{buildroot}/boot/Image
-else
-  echo placeholder > %{buildroot}/boot/Image
-fi
-echo "kernel-adaptation-pipa bootstrap" > %{buildroot}/usr/share/kernel-adaptation-pipa/README
 
 %files
-/boot/Image
-/usr/share/kernel-adaptation-pipa/README
 
 %changelog
-* Mon Jul 13 2026 Porter <porter@local> - 6.14.0-1
-- Bootstrap kernel package
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-0.placeholder
+- Refuse to build; real Image comes from pack-rpm.sh

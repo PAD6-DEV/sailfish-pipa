@@ -269,6 +269,12 @@ jobs:
         with:
           path: pkgs/firmware-pipa/out
           key: firmware-rpm-${{ hashFiles('pkgs/firmware-pipa/pack-rpm.sh', 'pkgs/firmware-pipa/rpm/**', 'firmware-pipa/build-firmware-tarball.sh', 'firmware-pipa/*.files') }}
+      - name: Cache kernel-adaptation-pipa RPM
+        id: cache-kernel-rpm
+        uses: actions/cache@v4
+        with:
+          path: kernel-adaptation-pipa/out
+          key: kernel-adapt-${{ hashFiles('kernel-adaptation-pipa/scripts/**', 'kernel-adaptation-pipa/rpm/**') }}-${{ env.KERNEL_PKG_URL }}
       - name: Cache mesa-pipa RPM
         id: cache-mesa-rpm
         uses: actions/cache@v4
@@ -340,6 +346,20 @@ jobs:
           sudo apt-get install -y -qq rpm
           bash pkgs/firmware-pipa/pack-rpm.sh
           test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
+      - name: Pack kernel-adaptation-pipa RPM (real Image)
+        if: steps.cache-kernel-rpm.outputs.cache-hit != 'true'
+        run: |
+          set -eux
+          chmod +x kernel-adaptation-pipa/scripts/pack-rpm.sh
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rpm cpio
+          KERNEL_PKG="$KERNEL_PKG_URL" bash kernel-adaptation-pipa/scripts/pack-rpm.sh
+          test -n "$(find kernel-adaptation-pipa/out -name 'kernel-adaptation-pipa-7*.rpm')"
+          # Guard: packaged Image must be a real kernel, not the old stub
+          tmp=$(mktemp -d)
+          rpm2cpio kernel-adaptation-pipa/out/kernel-adaptation-pipa-7*.rpm | (cd "$tmp" && cpio -idm --quiet)
+          test "$(wc -c < "$tmp/boot/Image")" -ge 1000000
+          rm -rf "$tmp"
       - name: Pack mesa-pipa RPM
         if: steps.cache-mesa-rpm.outputs.cache-hit != 'true'
         run: |
@@ -363,9 +383,10 @@ jobs:
           test -n "$(find pkgs/plymouth-lite/out -name 'plymouth-lite-theme-default*.rpm')"
           test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
           test -n "$(find pkgs/mesa-pipa/out -name 'mesa-pipa*.rpm')"
+          test -n "$(find kernel-adaptation-pipa/out -name 'kernel-adaptation-pipa-7*.rpm')"
           rpm -qp --provides pkgs/mesa-pipa/out/mesa-pipa*.rpm | grep -F 'libGLESv2.so.2()(64bit)'
           rpm -qp --provides pkgs/plymouth-lite/out/plymouth-lite-theme-default*.rpm | grep -F boot-splash-screen
-          ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/libssc/out pkgs/sensorfw-qt5-libssc/out pkgs/libcamera/out pkgs/plymouth-lite/out pkgs/firmware-pipa/out pkgs/mesa-pipa/out
+          ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/libssc/out pkgs/sensorfw-qt5-libssc/out pkgs/libcamera/out pkgs/plymouth-lite/out pkgs/firmware-pipa/out pkgs/mesa-pipa/out kernel-adaptation-pipa/out
       - uses: actions/upload-artifact@v4
         with:
           name: pub-pkgs
@@ -378,6 +399,7 @@ jobs:
             pkgs/plymouth-lite/out/*.rpm
             pkgs/firmware-pipa/out/*.rpm
             pkgs/mesa-pipa/out/*.rpm
+            kernel-adaptation-pipa/out/*.rpm
           if-no-files-found: error
           retention-days: 7
 
@@ -399,9 +421,17 @@ jobs:
           set -eux
           mkdir -p out/prebuilts repo/adaptation
           cp -a _arts/pub-adaptation/. repo/adaptation/
+          # Drop any leftover placeholder kernel RPM from bootstrap (tiny stub Image).
+          rm -f repo/adaptation/kernel-adaptation-pipa-6*.rpm
           find _arts/pub-pkgs -name '*.rpm' -exec cp -f {} repo/adaptation/ \;
+          # Real kernel must be present and large.
+          test -n "$(find repo/adaptation -name 'kernel-adaptation-pipa-7*.rpm')"
           sudo apt-get update -qq
-          sudo apt-get install -y -qq createrepo-c || sudo apt-get install -y -qq createrepo
+          sudo apt-get install -y -qq createrepo-c rpm cpio || sudo apt-get install -y -qq createrepo rpm cpio
+          tmp=$(mktemp -d)
+          rpm2cpio repo/adaptation/kernel-adaptation-pipa-7*.rpm | (cd "$tmp" && cpio -idm --quiet)
+          test "$(wc -c < "$tmp/boot/Image")" -ge 1000000
+          rm -rf "$tmp"
           createrepo_c repo/adaptation || createrepo repo/adaptation
           cp -f _arts/pub-uboot/u-boot-xiaomi-pipa.img out/prebuilts/
           cp -f _arts/pub-mesa/mesa-freedreno-sfos-aarch64.tar.gz out/prebuilts/

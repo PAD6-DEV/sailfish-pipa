@@ -47,10 +47,10 @@ rpmbuild -bb --define "_topdir $HOME/rpmbuild" "$HOME/rpmbuild/SPECS/droid-confi
 trap - EXIT
 rm -rf "$POLICY_STAGING"
 
-# kernel
-echo "CI placeholder kernel" > "$HOME/rpmbuild/SOURCES/Image"
-cp "$BOOT/rpm/kernel-adaptation-pipa.spec" "$HOME/rpmbuild/SPECS/"
-rpmbuild -bb --define "_topdir $HOME/rpmbuild" "$HOME/rpmbuild/SPECS/kernel-adaptation-pipa.spec"
+# kernel — real Image is packaged separately (kernel-adaptation-pipa/scripts/pack-rpm.sh)
+# from linux-pipa. Never ship a placeholder /boot/Image here: zypper would overwrite
+# a working kernel and leave a black screen after U-Boot.
+echo "NOTE: skipping placeholder kernel-adaptation-pipa (pack real RPM via scripts/pack-rpm.sh)"
 
 # droid-hal-version-pipa — ships /etc/hw-release (MER_HA_DEVICE=pipa)
 # BuildRequires are for OBS; local/bootstrap builds use --nodeps.

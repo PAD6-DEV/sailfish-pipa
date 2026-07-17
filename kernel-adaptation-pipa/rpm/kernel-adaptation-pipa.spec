@@ -1,90 +1,44 @@
-# Prebuilt kernel packaging for Xiaomi Pad 6 (pipa)
-# Place files under prebuilt/ before building the RPM:
-#   prebuilt/boot/Image
-#   prebuilt/boot/dtb/sm8250-xiaomi-pipa.dtb   (or your DTB name)
-#   prebuilt/lib/modules/<kver>/...
-#
-# Source of prebuilts: pipa-pkgs linux-pipa, or extract from an existing
-# EndeavourOS/Ultramarine/Nemo boot partition.
-
 Name:           kernel-adaptation-pipa
-Version:        6.14.0
-Release:        1%{?dist}
+Version:        7.1.0
+Release:        1
 Summary:        Linux kernel for Xiaomi Pad 6 (Sailfish OS)
 License:        GPL-2.0-only
-URL:            https://github.com/thespider2/pipa-pkgs
-BuildArch:      aarch64
+URL:            https://github.com/PipaDB/linux/tree/pipa/7.1
+Source0:        kernel-adaptation.tar.gz
+BuildArch:      noarch
+Provides:       kernel
+# Drop any older placeholder package that only shipped a stub Image.
+Obsoletes:      kernel-adaptation-pipa < 7.1.0
 
-# No compile — package staged prebuilts
-BuildRequires:  tar
-Requires:       /bin/bash
+%global __strip /bin/true
+%global debug_package %{nil}
 
 %description
-Kernel Image, DTB, and modules for Xiaomi Pad 6 mainline adaptation.
-Boot path on device uses Mu-Silicium UEFI + GRUB; this package installs
-kernel artifacts under /boot and /lib/modules for the flash packer / rootfs.
+Kernel Image, DTBs, and modules for Xiaomi Pad 6 from PipaDB linux
+pipa/7.1 (linux-pipa). Replaces the bootstrap placeholder RPM that
+previously overwrote /boot/Image with a few-byte stub.
 
 %prep
-# Expect tree next to spec: ../prebuilt
-%setup -q -c -T
-mkdir -p prebuilt
-if [ -d %{_sourcedir}/../prebuilt ]; then
-  cp -a %{_sourcedir}/../prebuilt/. prebuilt/ || true
-fi
-if [ -d %{_builddir}/../prebuilt ]; then
-  cp -a %{_builddir}/../prebuilt/. prebuilt/ || true
-fi
-# Also accept PREBUILT_DIR from environment via a stamp file written by build script
-if [ -f %{_sourcedir}/prebuilt-path.txt ]; then
-  src=$(cat %{_sourcedir}/prebuilt-path.txt)
-  cp -a "$src"/. prebuilt/ || true
-fi
+%setup -q -n destdir
 
 %build
-# nothing
 
 %install
 rm -rf %{buildroot}
-mkdir -p %{buildroot}/boot %{buildroot}/lib/modules %{buildroot}/usr/share/kernel-adaptation-pipa
-
-if [ ! -f prebuilt/boot/Image ] && [ ! -f prebuilt/Image ]; then
-  # Placeholder so the package can still be built in CI scaffolding;
-  # real Image must be supplied for a bootable device.
-  echo "WARNING: no prebuilt Image — installing placeholder marker"
-  echo "Replace with real pipa kernel before flashing" \
-    > %{buildroot}/usr/share/kernel-adaptation-pipa/MISSING_PREBUILT
-  mkdir -p %{buildroot}/boot
-  : > %{buildroot}/boot/Image.placeholder
-else
-  if [ -f prebuilt/boot/Image ]; then
-    install -Dm644 prebuilt/boot/Image %{buildroot}/boot/Image
-  else
-    install -Dm644 prebuilt/Image %{buildroot}/boot/Image
-  fi
-  if [ -d prebuilt/boot/dtb ]; then
-    mkdir -p %{buildroot}/boot/dtb
-    cp -a prebuilt/boot/dtb/. %{buildroot}/boot/dtb/
-  elif [ -d prebuilt/dtb ]; then
-    mkdir -p %{buildroot}/boot/dtb
-    cp -a prebuilt/dtb/. %{buildroot}/boot/dtb/
-  fi
-  if [ -d prebuilt/lib/modules ]; then
-    cp -a prebuilt/lib/modules/. %{buildroot}/lib/modules/
-  fi
-fi
-
-# Helper used by flash packer
-cat > %{buildroot}/usr/share/kernel-adaptation-pipa/README <<'EOF'
-kernel-adaptation-pipa installs Image (+ optional dtb) under /boot and modules
-under /lib/modules. The pipa flash packer copies these into the cust/boot
-partition alongside GRUB; silicium.img still goes to boot_ab.
-EOF
+mkdir -p %{buildroot}
+cp -a . %{buildroot}/
+# Hard fail if Image is missing or is still a placeholder.
+test -s %{buildroot}/boot/Image
+test $(stat -c%s %{buildroot}/boot/Image) -ge 1000000
 
 %files
+%defattr(-,root,root,-)
 /boot
 /lib/modules
 /usr/share/kernel-adaptation-pipa
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-1
+- Ship real linux-pipa 7.1 Image/DTB/modules; obsolete placeholder package
 * Mon Jul 13 2026 Sailfish pipa porter <porter@local> - 6.14.0-1
 - Initial prebuilt packaging for Xiaomi Pad 6

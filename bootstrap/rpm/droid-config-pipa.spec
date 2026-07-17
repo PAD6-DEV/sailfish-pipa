@@ -1,6 +1,6 @@
 Name:           droid-config-pipa
 Version:        0.1.5
-Release:        10
+Release:        11
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
 BuildArch:      noarch
@@ -74,6 +74,8 @@ if [ -f "$DESKTOP" ] && ! grep -qF 'libcamerify' "$DESKTOP"; then
 fi
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-11
+- Enable quiet/splash bootargs in extlinux for plymouth-lite
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-10
 - Wrap jolla-camera via RPM trigger instead of conflicting .desktop file
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-9
