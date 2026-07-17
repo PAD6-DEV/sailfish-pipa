@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Sailfish packaging: use pregenerated protobuf-c sources (no protoc on target).
+msgs_inc = include_directories('.')
+
+sources_gen = files(
+  'ssc-common.pb-c.c',
+  'ssc-sensor-suid.pb-c.c',
+  'ssc-sensor-proximity.pb-c.c',
+  'ssc-sensor-light.pb-c.c',
+  'ssc-sensor-accelerometer.pb-c.c',
+  'ssc-sensor-magnetometer.pb-c.c',
+  'ssc-sensor-rotationvector.pb-c.c',
+  'ssc-sensor-gyroscope.pb-c.c',
+)
+headers_gen = files(
+  'ssc-common.pb-c.h',
+  'ssc-sensor-suid.pb-c.h',
+  'ssc-sensor-proximity.pb-c.h',
+  'ssc-sensor-light.pb-c.h',
+  'ssc-sensor-accelerometer.pb-c.h',
+  'ssc-sensor-magnetometer.pb-c.h',
+  'ssc-sensor-rotationvector.pb-c.h',
+  'ssc-sensor-gyroscope.pb-c.h',
+)
+
+generated_dep = declare_dependency(
+  sources: sources_gen + headers_gen,
+  include_directories: includes,
+  dependencies: deps
+)
+deps += generated_dep

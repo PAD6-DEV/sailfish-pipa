@@ -32,7 +32,7 @@ After flashing, enable the pipa adaptation feed (GitHub Pages):
 ```bash
 ssu ar adaptation-xiaomi-pipa https://pad6-dev.github.io/sailfish-pipa/adaptation/
 zypper ref adaptation-xiaomi-pipa
-zypper in droid-config-pipa pipa-qcom-userspace pipa-hexagonrpc firmware-pipa
+zypper in droid-config-pipa pipa-qcom-userspace pipa-hexagonrpc libssc firmware-pipa
 ```
 
 Package sources and build scripts live under [`pkgs/`](pkgs/README.md).

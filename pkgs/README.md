@@ -12,6 +12,7 @@ Built into GitHub Pages adaptation repo:
 | `mesa-pipa` | Mesa freedreno/msm (Adreno 650) |
 | `pipa-qcom-userspace` | qrtr, pd-mapper, tqftpserv |
 | `pipa-hexagonrpc` | hexagonrpcd + libhexagonrpc |
+| `libssc` | Sensor Core client (+ qmi-glib / qrtr-glib / protobuf-c) |
 | `firmware-pipa` | GPU/DSP/touch/WiFi/BT firmware |
 
 ## On device
@@ -20,7 +21,7 @@ Built into GitHub Pages adaptation repo:
 ssu ar adaptation-xiaomi-pipa https://pad6-dev.github.io/sailfish-pipa/adaptation/
 zypper ref adaptation-xiaomi-pipa
 zypper in patterns-sailfish-device-configuration-pipa \
-  mesa-pipa pipa-qcom-userspace pipa-hexagonrpc firmware-pipa
+  mesa-pipa pipa-qcom-userspace pipa-hexagonrpc libssc firmware-pipa
 ```
 
 ## Build locally
@@ -32,6 +33,7 @@ zypper in patterns-sailfish-device-configuration-pipa \
 # aarch64 userspace (full Platform SDK docker)
 ./pkgs/pipa-qcom-userspace/build-in-sdk.sh
 ./pkgs/pipa-hexagonrpc/build-in-sdk.sh
+./pkgs/libssc/build-in-sdk.sh
 
 # Mesa freedreno RPM (needs mesa-pipa/out tarball from Platform SDK build)
 ./mesa-pipa/build-mesa-freedreno.sh

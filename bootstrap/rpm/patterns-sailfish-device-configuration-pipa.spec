@@ -1,5 +1,5 @@
 Name:           patterns-sailfish-device-configuration-pipa
-Version:        0.3.9
+Version:        0.3.10
 Release:        1
 Summary:        Sailfish configuration pattern for Xiaomi Pad 6
 License:        BSD
@@ -24,6 +24,7 @@ Requires:       droid-hal-version-pipa
 Requires:       mesa-pipa
 Requires:       pipa-qcom-userspace
 Requires:       pipa-hexagonrpc
+Requires:       libssc
 Requires:       firmware-pipa
 Requires:       alsa-utils
 Requires:       jolla-developer-mode
@@ -52,6 +53,8 @@ normal Sailfish session.
 %files
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.3.10-1
+- Require libssc for Qualcomm Sensor Core access
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.3.9-1
 - Require droid-config-pipa-policy-settings (replaces ohm-configs-default)
 * Fri Jul 17 2026 Porter <porter@local> - 0.3.8-1

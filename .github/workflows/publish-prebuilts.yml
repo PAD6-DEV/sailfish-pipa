@@ -213,7 +213,7 @@ jobs:
 
   build-pkgs:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 150
     needs: [build-firmware, build-mesa]
     steps:
       - uses: actions/checkout@v4
@@ -239,6 +239,12 @@ jobs:
         with:
           path: pkgs/pipa-hexagonrpc/out
           key: pipa-hex-${{ hashFiles('pkgs/pipa-hexagonrpc/build-in-sdk.sh', 'pkgs/pipa-hexagonrpc/rpm/**', 'pkgs/pipa-hexagonrpc/files/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
+      - name: Cache libssc RPM
+        id: cache-libssc
+        uses: actions/cache@v4
+        with:
+          path: pkgs/libssc/out
+          key: libssc-${{ hashFiles('pkgs/libssc/build-in-sdk.sh', 'pkgs/libssc/rpm/**', 'pkgs/libssc/files/**', 'pkgs/libssc/generated/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
       - name: Cache firmware-pipa RPM
         id: cache-fw-rpm
         uses: actions/cache@v4
@@ -267,6 +273,14 @@ jobs:
           SFOS_SDK_RELEASE="$SFOS_SDK_RELEASE" SDK_IMAGE="$MESA_SDK_IMAGE" \
             bash pkgs/pipa-hexagonrpc/build-in-sdk.sh
           test -n "$(find pkgs/pipa-hexagonrpc/out -name 'pipa-hexagonrpc*.rpm')"
+      - name: Build libssc (SFOS SDK sb2)
+        if: steps.cache-libssc.outputs.cache-hit != 'true'
+        run: |
+          set -eux
+          chmod +x pkgs/libssc/build-in-sdk.sh
+          SFOS_SDK_RELEASE="$SFOS_SDK_RELEASE" SDK_IMAGE="$MESA_SDK_IMAGE" \
+            bash pkgs/libssc/build-in-sdk.sh
+          test -n "$(find pkgs/libssc/out -name 'libssc*.rpm')"
       - name: Pack firmware-pipa RPM
         if: steps.cache-fw-rpm.outputs.cache-hit != 'true'
         run: |
@@ -290,16 +304,18 @@ jobs:
           set -eux
           test -n "$(find pkgs/pipa-qcom-userspace/out -name 'pipa-qcom-userspace*.rpm')"
           test -n "$(find pkgs/pipa-hexagonrpc/out -name 'pipa-hexagonrpc*.rpm')"
+          test -n "$(find pkgs/libssc/out -name 'libssc*.rpm')"
           test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
           test -n "$(find pkgs/mesa-pipa/out -name 'mesa-pipa*.rpm')"
           rpm -qp --provides pkgs/mesa-pipa/out/mesa-pipa*.rpm | grep -F 'libGLESv2.so.2()(64bit)'
-          ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/firmware-pipa/out pkgs/mesa-pipa/out
+          ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/libssc/out pkgs/firmware-pipa/out pkgs/mesa-pipa/out
       - uses: actions/upload-artifact@v4
         with:
           name: pub-pkgs
           path: |
             pkgs/pipa-qcom-userspace/out/*.rpm
             pkgs/pipa-hexagonrpc/out/*.rpm
+            pkgs/libssc/out/*.rpm
             pkgs/firmware-pipa/out/*.rpm
             pkgs/mesa-pipa/out/*.rpm
           if-no-files-found: error

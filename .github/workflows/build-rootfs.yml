@@ -69,7 +69,7 @@ jobs:
               # Fresh bootstrap trio (droid-config / kernel / pattern)
               ./bootstrap/build-rpms.sh
               # Merge published aarch64 + firmware RPMs from Pages so the pattern
-              # Requires (firmware-pipa, pipa-qcom-userspace, pipa-hexagonrpc) resolve.
+              # Requires (firmware-pipa, pipa-qcom-userspace, pipa-hexagonrpc, libssc) resolve.
               chmod +x scripts/seed-adaptation-from-pages.sh
               ./scripts/seed-adaptation-from-pages.sh repo/adaptation || true
               # If firmware RPM still missing, pack from Pages firmware tarball.

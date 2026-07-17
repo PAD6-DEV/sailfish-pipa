@@ -74,7 +74,7 @@ cat > "$SITE/index.html" <<EOF
   <p><a href="adaptation/">adaptation/</a></p>
   <pre>ssu ar adaptation-xiaomi-pipa ${PAGES_BASE}/adaptation/
 zypper ref adaptation-xiaomi-pipa
-zypper in droid-config-pipa pipa-qcom-userspace pipa-hexagonrpc firmware-pipa
+zypper in droid-config-pipa pipa-qcom-userspace pipa-hexagonrpc libssc firmware-pipa
 # or pull the full pattern:
 zypper in patterns-sailfish-device-configuration-pipa</pre>
   <h2>Reusable prebuilts</h2>
