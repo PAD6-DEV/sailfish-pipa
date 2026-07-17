@@ -97,21 +97,26 @@ sb2_t bash -lc "
   export LD_LIBRARY_PATH=$LIBSSC_STAGE/usr/lib64:\${LD_LIBRARY_PATH:-}
   export LIBRARY_PATH=$LIBSSC_STAGE/usr/lib64:\${LIBRARY_PATH:-}
   cd $SRC
-  rm -rf build && mkdir build && cd build
-  qmake ../sscaccelerometeradaptor.pro
-  make -j$JOBS
-  make INSTALL_ROOT=$DEST install
+  for pro in sscaccelerometeradaptor.pro sscalsadaptor.pro; do
+    name=\${pro%.pro}
+    rm -rf build-\$name && mkdir build-\$name && cd build-\$name
+    qmake ../\$pro
+    make -j$JOBS
+    make INSTALL_ROOT=$DEST install
+    cd ..
+  done
 "
 
 # Normalize plugin path (qmake installs under QT_INSTALL_LIBS)
 mkdir -p "$DEST/usr/lib64/sensord-qt5"
-find "$DEST" -name 'libsscaccelerometeradaptor-qt5.so' | while read -r f; do
+find "$DEST" -name 'libssc*adaptor-qt5.so' | while read -r f; do
   target="$DEST/usr/lib64/sensord-qt5/$(basename "$f")"
   if [ "$f" != "$target" ]; then
     cp -a "$f" "$target"
   fi
 done
 test -f "$DEST/usr/lib64/sensord-qt5/libsscaccelerometeradaptor-qt5.so"
+test -f "$DEST/usr/lib64/sensord-qt5/libsscalsadaptor-qt5.so"
 
 rm -rf "$OUT/wrap"
 mkdir -p "$OUT/wrap/destdir"

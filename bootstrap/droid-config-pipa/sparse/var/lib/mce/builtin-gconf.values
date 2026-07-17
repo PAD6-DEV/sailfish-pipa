@@ -1,0 +1,6 @@
+/system/osso/dsm/display/color_profile=hardcoded
+/system/osso/dsm/display/display_brightness=83
+/system/osso/dsm/display/max_display_brightness_levels=100
+/system/osso/dsm/display/inhibit_blank_mode=1
+/system/osso/dsm/display/als_enabled=true
+/system/osso/dsm/display/als_autobrightness=true
