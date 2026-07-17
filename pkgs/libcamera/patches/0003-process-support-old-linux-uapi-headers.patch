@@ -1,0 +1,72 @@
+From: Sailfish pipa adaptation <aymanrar2c@gmail.com>
+Subject: [PATCH] libcamera: process: support old Linux UAPI headers on arm64
+
+Sailfish OS 5 ships Linux UAPI headers old enough to lack clone_args,
+CLONE_PIDFD, P_PIDFD and the clone3/pidfd_send_signal syscall numbers.
+The pipa runtime kernel supports all of these interfaces, so provide their
+stable arm64 ABI definitions locally.
+
+--- a/src/libcamera/process.cpp
++++ b/src/libcamera/process.cpp
+@@ -25,6 +25,30 @@
+ #include <libcamera/base/log.h>
+ #include <libcamera/base/utils.h>
+ 
++#ifndef CLONE_PIDFD
++#define CLONE_PIDFD 0x00001000
++#endif
++
++#ifndef P_PIDFD
++#define P_PIDFD 3
++#endif
++
++#ifndef SYS_pidfd_send_signal
++#if defined(__aarch64__)
++#define SYS_pidfd_send_signal 424
++#else
++#error "Define SYS_pidfd_send_signal for this architecture"
++#endif
++#endif
++
++#ifndef SYS_clone3
++#if defined(__aarch64__)
++#define SYS_clone3 435
++#else
++#error "Define SYS_clone3 for this architecture"
++#endif
++#endif
++
+ /**
+  * \file process.h
+  * \brief Process object
+@@ -35,6 +56,21 @@ LOG_DEFINE_CATEGORY(Process)
+ 
+ namespace {
+ 
++/* The stable clone3 UAPI layout from linux/sched.h. */
++struct CloneArgsCompat {
++	unsigned long long flags;
++	unsigned long long pidfd;
++	unsigned long long child_tid;
++	unsigned long long parent_tid;
++	unsigned long long exit_signal;
++	unsigned long long stack;
++	unsigned long long stack_size;
++	unsigned long long tls;
++	unsigned long long set_tid;
++	unsigned long long set_tid_size;
++	unsigned long long cgroup;
++};
++
+ void closeAllFdsExcept(std::vector<int> v)
+ {
+ 	sort(v.begin(), v.end());
+@@ -150,7 +186,7 @@ int Process::start(const std::string &path,
+ 			return -EINVAL;
+ 	}
+ 
+-	clone_args cargs = {};
++	CloneArgsCompat cargs = {};
+ 	int pidfd;
+ 
+ 	cargs.flags = CLONE_PIDFD | CLONE_NEWUSER | CLONE_NEWNET;

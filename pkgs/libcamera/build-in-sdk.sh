@@ -194,6 +194,7 @@ cp -a /sailfish-pipa/pkgs/libcamera/patches/. "$WORK/"
   cd "$SRC"
   patch -p1 -F3 < "$WORK/0001-ipa-libipa-Add-sensor-helper-for-OV13B10.patch"
   patch -p1 -F3 < "$WORK/0002-libcamera-add-pipa-sensor-properties.patch"
+  patch -p1 < "$WORK/0003-process-support-old-linux-uapi-headers.patch"
 )
 
 echo "==> meson configure + build (cam=$CAM_OPT)"
