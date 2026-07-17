@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: CC0-1.0
+# OmniVision OV13B10 – 13 MP rear camera (Xiaomi Pad 6 / pipa)
+# 10-bit Bayer GRBG, 4 MIPI CSI-2 lanes
+%YAML 1.1
+---
+version: 1
+algorithms:
+  - BlackLevel:
+      blackLevel: 4096
+  - Awb:
+  - Adjust:
+  - Agc:

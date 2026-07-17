@@ -73,8 +73,11 @@ Requires: jolla-devicelock-plugin-encsfa
 # sound — UCM profiles ship in droid-config-pipa (SFOS repos lack alsa-ucm-conf)
 Requires: alsa-utils
 
-# Cameras
-Requires: v4l-utils
+# Cameras — mainline CAMSS via libcamera (simple pipeline + IPA)
+Requires: libcamera
+Requires: libcamera-ipa
+Requires: libcamera-tools
+Requires: gstreamer1.0-plugin-libcamera
 
 # Firmware / regulatory
 Requires: wireless-regdb

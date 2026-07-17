@@ -7,9 +7,13 @@ Do **not** use Android `boot.img` here (that is for hybris ports).
 
 ## Stage real kernel from pipa-pkgs
 
+Kernel source is [PipaDB/linux](https://github.com/PipaDB/linux) `pipa/7.1`
+(packaged as Arch `linux-pipa` in pipa-pkgs). After rebuild, stage the new
+`linux-pipa-7.1.0-*.pkg.tar.xz` (or whatever version CI published):
+
 ```bash
 curl -fL -o /tmp/linux-pipa.pkg.tar.xz \
-  https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.3-2-aarch64.pkg.tar.xz
+  https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.0-1-aarch64.pkg.tar.xz
 ./scripts/stage-prebuilt-kernel.sh /tmp/extract-dir
 # or:
 mkdir -p /tmp/lp && tar -C /tmp/lp -xf /tmp/linux-pipa.pkg.tar.xz

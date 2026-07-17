@@ -1,0 +1,34 @@
+Add camera sensor helpers for the Xiaomi Pad 6 cameras.
+
+OV13B10 uses the standard Omnivision linear gain model. HI846 uses a
+linear model with non-zero offset matching its 0-240 analogue gain range.
+
+--- a/src/ipa/libipa/camera_sensor_helper.cpp
++++ b/src/ipa/libipa/camera_sensor_helper.cpp
+@@ -788,6 +788,26 @@
+ 	}
+ };
+ REGISTER_CAMERA_SENSOR_HELPER("ov13858", CameraSensorHelperOv13858)
++class CameraSensorHelperOv13b10 : public CameraSensorHelper
++{
++public:
++	CameraSensorHelperOv13b10()
++	{
++		gain_ = AnalogueGainLinear{ 1, 0, 0, 128 };
++	}
++};
++REGISTER_CAMERA_SENSOR_HELPER("ov13b10", CameraSensorHelperOv13b10)
++
++class CameraSensorHelperHi846 : public CameraSensorHelper
++{
++public:
++	CameraSensorHelperHi846()
++	{
++		gain_ = AnalogueGainLinear{ 32, 1024, 0, 1024 };
++	}
++};
++REGISTER_CAMERA_SENSOR_HELPER("hi846", CameraSensorHelperHi846)
++
+ 
+ class CameraSensorHelperVd55g1 : public CameraSensorHelper
+ {

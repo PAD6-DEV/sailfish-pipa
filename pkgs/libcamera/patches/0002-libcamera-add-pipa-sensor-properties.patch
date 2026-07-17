@@ -1,0 +1,28 @@
+--- a/src/libcamera/sensor/camera_sensor_properties.cpp
++++ b/src/libcamera/sensor/camera_sensor_properties.cpp
+@@ -149,7 +149,24 @@
+ 				 * 9: "Resolution Pattern"
+ 				 */
+ 			},
+-			.sensorDelays = { },
++			.sensorDelays = {
++				.exposureDelay = 2,
++				.gainDelay = 2,
++				.vblankDelay = 2,
++				.hblankDelay = 2,
++			},
++		} },
++		{ "ov13b10", {
++			.unitCellSize = { 1200, 1200 },
++			.testPatternModes = {
++				{ controls::draft::TestPatternModeOff, 0 },
++			},
++			.sensorDelays = {
++				.exposureDelay = 2,
++				.gainDelay = 2,
++				.vblankDelay = 2,
++				.hblankDelay = 2,
++			},
+ 		} },
+ 		{ "hm1246", {
+ 			.unitCellSize = { 3000, 3000 },
