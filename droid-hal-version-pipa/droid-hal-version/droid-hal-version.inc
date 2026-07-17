@@ -38,6 +38,7 @@ Release: %{rel_date}
 Summary: SailfishOS HW Adaptation droid version package %{_shortened_version}.%{_obs_build_count} (%{_build_flavour})
 License: BSD
 Source:  %{name}-%{version}.tar.gz
+BuildArch: noarch
 # For devices that were last reflashed before switching from patterns to
 # meta-packages, otherwise they will miss any patterns changes in the future:
 Requires: patterns-sailfish-device-configuration-%{rpm_device}

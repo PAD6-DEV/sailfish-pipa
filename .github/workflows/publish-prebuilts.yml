@@ -148,6 +148,7 @@ jobs:
           set -eux
           {
             find bootstrap/build-rpms.sh bootstrap/rpm \
+              droid-hal-version-pipa \
               droid-config-pipa/sparse droid-config-pipa/patterns droid-config-pipa/rpm \
               \( -type f -o -type l \) -print0 2>/dev/null \
               | sort -z \
@@ -186,13 +187,19 @@ jobs:
               mkdir -p repo/adaptation
               zypper -n in createrepo_c rpm-build tar gzip || true
               ./bootstrap/build-rpms.sh
-              test "$(find repo/adaptation -name "*.rpm" | wc -l)" -ge 3
+              test -n "$(find repo/adaptation -name "droid-hal-version-pipa-*.noarch.rpm")"
+              test -n "$(find repo/adaptation -name "droid-config-pipa-*.noarch.rpm")"
+              test -n "$(find repo/adaptation -name "droid-config-pipa-pulseaudio-settings-*.noarch.rpm")"
+              test -n "$(find repo/adaptation -name "patterns-sailfish-device-configuration-pipa-*.noarch.rpm")"
               createrepo_c repo/adaptation || createrepo repo/adaptation
             '
       - name: Verify adaptation RPMs
         run: |
           set -eux
-          test "$(find repo/adaptation -name '*.rpm' | wc -l)" -ge 3
+          test -n "$(find repo/adaptation -name "droid-hal-version-pipa-*.noarch.rpm")"
+          test -n "$(find repo/adaptation -name "droid-config-pipa-*.noarch.rpm")"
+          test -n "$(find repo/adaptation -name "droid-config-pipa-pulseaudio-settings-*.noarch.rpm")"
+          test -n "$(find repo/adaptation -name "patterns-sailfish-device-configuration-pipa-*.noarch.rpm")"
           ls -lh repo/adaptation
       - uses: actions/upload-artifact@v4
         with:
@@ -282,6 +289,7 @@ jobs:
           test -n "$(find pkgs/pipa-hexagonrpc/out -name 'pipa-hexagonrpc*.rpm')"
           test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
           test -n "$(find pkgs/mesa-pipa/out -name 'mesa-pipa*.rpm')"
+          rpm -qp --provides pkgs/mesa-pipa/out/mesa-pipa*.rpm | grep -F 'libGLESv2.so.2()(64bit)'
           ls -lh pkgs/pipa-qcom-userspace/out pkgs/pipa-hexagonrpc/out pkgs/firmware-pipa/out pkgs/mesa-pipa/out
       - uses: actions/upload-artifact@v4
         with:

@@ -1,6 +1,6 @@
 Name:           mesa-pipa
 Version:        24.1.7
-Release:        2
+Release:        3
 Summary:        Mesa freedreno/msm for Xiaomi Pad 6 (Sailfish OS aarch64)
 License:        MIT
 URL:            https://www.mesa3d.org/
@@ -26,6 +26,11 @@ Provides:       mesa-llvmpipe-libgbm = %{version}
 Provides:       mesa-llvmpipe-libglapi = %{version}
 Provides:       mesa-llvmpipe-libGL = %{version}
 Provides:       mesa-llvmpipe-dri-drivers = %{version}
+Provides:       libEGL.so.1()(64bit)
+Provides:       libGLESv1_CM.so.1()(64bit)
+Provides:       libGLESv2.so.2()(64bit)
+Provides:       libgbm.so.1()(64bit)
+Provides:       libglapi.so.0()(64bit)
 
 Obsoletes:      mesa-dri-drivers < %{version}-%{release}
 Obsoletes:      mesa-libEGL < %{version}-%{release}
@@ -75,6 +80,8 @@ rm -rf %{buildroot}/usr/include \
 /usr
 
 %changelog
+* Fri Jul 17 2026 Porter <porter@local> - 24.1.7-3
+- Provide Mesa sonames required by Qt and system GL users
 * Fri Jul 17 2026 Porter <porter@local> - 24.1.7-2
 - Provide/Obsolete/Conflict mesa-llvmpipe-* so mic can replace stock Mesa
 * Thu Jul 16 2026 Porter <porter@local> - 24.1.7-1
