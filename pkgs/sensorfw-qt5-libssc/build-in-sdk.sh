@@ -106,7 +106,10 @@ sb2_t bash -lc "
 # Normalize plugin path (qmake installs under QT_INSTALL_LIBS)
 mkdir -p "$DEST/usr/lib64/sensord-qt5"
 find "$DEST" -name 'libsscaccelerometeradaptor-qt5.so' | while read -r f; do
-  cp -a "$f" "$DEST/usr/lib64/sensord-qt5/"
+  target="$DEST/usr/lib64/sensord-qt5/$(basename "$f")"
+  if [ "$f" != "$target" ]; then
+    cp -a "$f" "$target"
+  fi
 done
 test -f "$DEST/usr/lib64/sensord-qt5/libsscaccelerometeradaptor-qt5.so"
 
