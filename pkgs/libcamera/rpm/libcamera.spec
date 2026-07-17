@@ -22,12 +22,13 @@ Requires:       %{name} = %{version}-%{release}
 Image Processing Algorithm modules and helpers for libcamera.
 
 %package tools
-Summary:        Camera tools (cam, libcamerify)
+Summary:        Camera tools (libcamerify, optional cam)
 Requires:       %{name} = %{version}-%{release}
 Requires:       %{name}-ipa = %{version}-%{release}
 
 %description tools
-Command-line tools: cam and libcamerify (V4L2 compatibility shim).
+Command-line tools: libcamerify (V4L2 compatibility shim) and cam when
+libevent was available at build time.
 
 %package devel
 Summary:        Development files for libcamera
@@ -75,6 +76,7 @@ rm -rf %{buildroot}/usr/share/doc \
 /usr/bin/libcamerify
 /usr/bin/libcamera-bug-report
 
+
 %files devel
 %defattr(-,root,root,-)
 /usr/include/libcamera
@@ -88,3 +90,4 @@ rm -rf %{buildroot}/usr/share/doc \
 %changelog
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.7.1-1
 - Initial Sailfish package with pipa OV13B10/HI846 sensor helpers
+- Build cam only when libevent_pthreads is available; always ship libcamerify

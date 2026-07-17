@@ -66,16 +66,25 @@ mkdir -p "$DEST" "$OUT" "$HOST_OUT" "$WORK/src"
 
 sb2 -t "$TARGET" true
 sb2_install gcc gcc-c++ make binutils pkgconfig ninja git curl tar \
-  xz gzip cmake python3 \
+  xz gzip cmake python3 openssl \
   openssl-devel libdrm-devel libyaml-devel libelf-devel \
   libjpeg-turbo-devel libtiff-devel \
   gstreamer1.0-devel gstreamer1.0-plugins-base-devel \
-  glib2-devel libudev-devel zlib-devel || true
+  glib2-devel libudev-devel zlib-devel \
+  libevent-devel || true
 # Alternate / pkg-config style names on some SFOS images
 sb2_install pkgconfig\(libdrm\) pkgconfig\(yaml-0.1\) pkgconfig\(libelf\) \
   pkgconfig\(libjpeg\) pkgconfig\(libtiff-4\) \
   pkgconfig\(gstreamer-1.0\) pkgconfig\(gstreamer-video-1.0\) \
-  pkgconfig\(glib-2.0\) pkgconfig\(libudev\) pkgconfig\(openssl\) || true
+  pkgconfig\(glib-2.0\) pkgconfig\(libudev\) pkgconfig\(openssl\) \
+  pkgconfig\(libevent_pthreads\) || true
+
+# cam needs libevent_pthreads; SFOS may lack it — keep libcamerify either way.
+CAM_OPT=disabled
+if sb2_t pkg-config --exists libevent_pthreads; then
+  CAM_OPT=enabled
+fi
+echo "==> cam option: $CAM_OPT"
 
 # The SFOS target has no pip and its Meson package is unavailable/too old.
 # Stage architecture-independent Python build tools directly under $HOME,
@@ -134,7 +143,7 @@ cp -a /sailfish-pipa/pkgs/libcamera/patches/. "$WORK/"
   patch -p1 -F3 < "$WORK/0002-libcamera-add-pipa-sensor-properties.patch"
 )
 
-echo "==> meson configure + build"
+echo "==> meson configure + build (cam=$CAM_OPT)"
 sb2_t bash -lc "
   set -e
   export PYTHONPATH=$PYTHON_STAGE
@@ -147,7 +156,7 @@ sb2_t bash -lc "
     -Dipas=simple,vimc \
     -Dv4l2=enabled \
     -Dgstreamer=enabled \
-    -Dcam=enabled \
+    -Dcam=$CAM_OPT \
     -Dlc-compliance=disabled \
     -Dqcam=disabled \
     -Dpycamera=disabled \
@@ -164,7 +173,24 @@ install -Dm644 /sailfish-pipa/pkgs/libcamera/files/hi846.yaml \
 
 # Sanity
 test -e "$DEST/usr/lib64/libcamera.so" || test -e "$DEST/usr/lib64/libcamera.so.0"
-test -x "$DEST/usr/bin/cam"
+test -x "$DEST/usr/bin/libcamerify"
+# Keep RPM %files stable: ship a stub when libevent was unavailable.
+if [ ! -x "$DEST/usr/bin/cam" ]; then
+  cat > "$DEST/usr/bin/cam" <<'EOF'
+#!/bin/sh
+echo "cam was not built (libevent_pthreads missing on this target)" >&2
+exit 1
+EOF
+  chmod 755 "$DEST/usr/bin/cam"
+fi
+if [ ! -e "$DEST/usr/bin/libcamera-bug-report" ]; then
+  cat > "$DEST/usr/bin/libcamera-bug-report" <<'EOF'
+#!/bin/sh
+echo "libcamera-bug-report was not installed by this build" >&2
+exit 1
+EOF
+  chmod 755 "$DEST/usr/bin/libcamera-bug-report"
+fi
 test -f "$DEST/usr/lib64/gstreamer-1.0/libgstlibcamera.so" || \
   test -f "$DEST/usr/lib/gstreamer-1.0/libgstlibcamera.so"
 
