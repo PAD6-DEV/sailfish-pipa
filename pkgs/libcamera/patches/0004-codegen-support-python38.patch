@@ -1,0 +1,29 @@
+From: Sailfish pipa adaptation <aymanrar2c@gmail.com>
+Subject: [PATCH] codegen: support Python 3.8 in gen-gst-controls
+
+Sailfish OS 5 SDK ships Python 3.8, which lacks str.removeprefix().
+
+--- a/utils/codegen/gen-gst-controls.py
++++ b/utils/codegen/gen-gst-controls.py
+@@ -79,6 +79,12 @@ def kebab_case(s):
+     return snake_case(s).replace('_', '-')
+ 
+ 
++def remove_prefix(s, prefix):
++    if s.startswith(prefix):
++        return s[len(prefix):]
++    return s
++
++
+ def extend_control(ctrl):
+     if ctrl.vendor != 'libcamera':
+         ctrl.namespace = f'{ctrl.vendor}::'
+@@ -97,7 +103,7 @@ def extend_control(ctrl):
+         # Remove common prefix from enum variant names
+         prefix = find_common_prefix([enum.name for enum in ctrl.enum_values])
+         for enum in ctrl.enum_values:
+-            enum.gst_name = kebab_case(enum.name.removeprefix(prefix))
++            enum.gst_name = kebab_case(remove_prefix(enum.name, prefix))
+ 
+         ctrl.gtype = 'enum'
+         ctrl.default = '0'
