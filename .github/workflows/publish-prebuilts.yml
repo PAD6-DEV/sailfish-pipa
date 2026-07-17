@@ -36,7 +36,7 @@ env:
   SDK_IMAGE: coderus/sailfishos-platform-sdk-base:4.6.0.13
   MESA_SDK_IMAGE: coderus/sailfishos-platform-sdk:5.0.0.43
   SFOS_SDK_RELEASE: "5.0.0.43"
-  KERNEL_PKG_URL: https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.3-2-aarch64.pkg.tar.xz
+  KERNEL_PKG_URL: https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.0-1-aarch64.pkg.tar.xz
   PAGES_BASE: https://pad6-dev.github.io/sailfish-pipa
 
 jobs:
