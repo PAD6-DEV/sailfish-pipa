@@ -1,6 +1,6 @@
 Name:           libssc
 Version:        0.4.4
-Release:        1
+Release:        2
 Summary:        Qualcomm Sensor Core client library (and QMI/QRTR deps)
 License:        GPL-3.0-or-later
 URL:            https://codeberg.org/DylanVanAssche/libssc
@@ -38,7 +38,8 @@ rm -rf %{buildroot}/usr/include \
 rm -f %{buildroot}/usr/bin/qmicli \
       %{buildroot}/usr/bin/qmi-firmware-update \
       %{buildroot}/usr/bin/qmi-network \
-      %{buildroot}/usr/bin/qmi-proxy || true
+      %{buildroot}/usr/bin/qmi-proxy \
+      %{buildroot}/usr/libexec/qmi-proxy || true
 
 %files
 %defattr(-,root,root,-)
@@ -49,5 +50,7 @@ rm -f %{buildroot}/usr/bin/qmicli \
 /usr/lib64/libprotobuf-c.so*
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.4.4-2
+- Drop unpackaged /usr/libexec/qmi-proxy from runtime package
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.4.4-1
 - Initial SFOS aarch64 package for pipa (bundles qmi/qrtr/protobuf-c)
