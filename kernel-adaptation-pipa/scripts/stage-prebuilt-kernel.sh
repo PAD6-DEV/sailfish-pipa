@@ -69,6 +69,19 @@ elif [ -d "$SRC/lib/modules" ]; then
   cp -a "$SRC/lib/modules" "$DEST/lib/modules"
 fi
 
+# Sailfish kmod does not load CONFIG_MODULE_COMPRESS_ZSTD (.ko.zst).
+# Decompress in place so panel/DRM modules can load without an initramfs.
+if [ -d "$DEST/lib/modules" ]; then
+  if command -v zstd >/dev/null 2>&1; then
+    find "$DEST/lib/modules" -type f -name '*.ko.zst' -print0 \
+      | while IFS= read -r -d '' f; do
+          zstd -d -f -q -o "${f%.zst}" "$f" && rm -f "$f"
+        done
+  else
+    echo "WARN: zstd not installed; leaving .ko.zst modules (panel may not load)" >&2
+  fi
+fi
+
 if [ ! -f "$DEST/boot/Image" ]; then
   echo "ERROR: could not locate kernel Image under $DEST/boot" >&2
   ls -la "$DEST/boot" >&2 || true

@@ -1,6 +1,6 @@
 Name:           kernel-adaptation-pipa
 Version:        7.1.0
-Release:        1
+Release:        2
 Summary:        Linux kernel for Xiaomi Pad 6 (Sailfish OS)
 License:        GPL-2.0-only
 URL:            https://github.com/PipaDB/linux/tree/pipa/7.1
@@ -38,6 +38,8 @@ test $(stat -c%s %{buildroot}/boot/Image) -ge 1000000
 /usr/share/kernel-adaptation-pipa
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-2
+- Decompress zstd modules so SFOS can load the nt36532 panel driver
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-1
 - Ship real linux-pipa 7.1 Image/DTB/modules; obsolete placeholder package
 * Mon Jul 13 2026 Sailfish pipa porter <porter@local> - 6.14.0-1

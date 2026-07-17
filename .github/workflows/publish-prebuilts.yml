@@ -352,13 +352,16 @@ jobs:
           set -eux
           chmod +x kernel-adaptation-pipa/scripts/pack-rpm.sh
           sudo apt-get update -qq
-          sudo apt-get install -y -qq rpm cpio
+          sudo apt-get install -y -qq rpm cpio zstd
           KERNEL_PKG="$KERNEL_PKG_URL" bash kernel-adaptation-pipa/scripts/pack-rpm.sh
           test -n "$(find kernel-adaptation-pipa/out -name 'kernel-adaptation-pipa-7*.rpm')"
           # Guard: packaged Image must be a real kernel, not the old stub
           tmp=$(mktemp -d)
           rpm2cpio kernel-adaptation-pipa/out/kernel-adaptation-pipa-7*.rpm | (cd "$tmp" && cpio -idm --quiet)
           test "$(wc -c < "$tmp/boot/Image")" -ge 1000000
+          # Panel driver must be plain .ko (not .ko.zst) for SFOS kmod
+          find "$tmp/lib/modules" -name 'panel-novatek-nt36532.ko' | grep -q .
+          ! find "$tmp/lib/modules" -name 'panel-novatek-nt36532.ko.zst' | grep -q .
           rm -rf "$tmp"
       - name: Pack mesa-pipa RPM
         if: steps.cache-mesa-rpm.outputs.cache-hit != 'true'

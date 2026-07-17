@@ -60,11 +60,10 @@ replacements = {
         "if load scsi 0#linux ${kernel_addr_r} /boot/Image; then "
         "load scsi 0#linux ${fdt_addr_r} /boot/dtbs/qcom/sm8250-xiaomi-pipa.dtb; "
         # No initramfs: filesystem LABEL= needs udev. GPT PARTLABEL works in-kernel.
-        # quiet+splash for plymouth-lite; keep console=tty0 so FB is available
-        # before ply-image runs (and as fallback if splash packages are missing).
+        # Verbose console until panel module (nt36532) is confirmed loading from
+        # rootfs; quiet/splash blanks the panel when DRM starts without the driver.
         "setenv bootargs root=PARTLABEL=linux rw rootwait "
-        "quiet splash vt.global_cursor_default=0 "
-        "console=tty0 console=ttyMSM0,115200n8 "
+        "console=tty0 console=ttyMSM0,115200n8 earlycon ignore_loglevel "
         "clk_ignore_unused pd_ignore_unused cma=128M; "
         "booti ${kernel_addr_r} - ${fdt_addr_r}; "
         "else "
