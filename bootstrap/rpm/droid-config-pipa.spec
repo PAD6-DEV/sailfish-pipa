@@ -1,6 +1,6 @@
 Name:           droid-config-pipa
 Version:        0.1.5
-Release:        12
+Release:        13
 Summary:        Sailfish OS device config for Xiaomi Pad 6 (pipa)
 License:        BSD
 BuildArch:      noarch
@@ -60,20 +60,22 @@ rm -f %{buildroot}/usr/share/applications/jolla-camera.desktop
 %exclude /etc/ohm
 %exclude /etc/dbus-1/system.d/ohm-policy.conf
 
-# Wrap Camera with libcamerify without owning jolla-camera's desktop file.
+# Wrap Camera via jolla-camera-wrapper (env + libcamerify) without owning desktop.
 %triggerin -- jolla-camera
 DESKTOP=/usr/share/applications/jolla-camera.desktop
-if [ -f "$DESKTOP" ] && ! grep -qF 'libcamerify' "$DESKTOP"; then
-  sed -i 's|^Exec=.*|Exec=/usr/bin/invoker --type=silica-media,silica-qt5 -A -- /usr/bin/libcamerify /usr/bin/jolla-camera|' "$DESKTOP" || :
+if [ -f "$DESKTOP" ] && ! grep -qF 'jolla-camera-wrapper' "$DESKTOP"; then
+  sed -i 's|^Exec=.*|Exec=/usr/bin/invoker --type=silica-media,silica-qt5 -A -- /usr/bin/jolla-camera-wrapper|' "$DESKTOP" || :
 fi
 
 %posttrans
 DESKTOP=/usr/share/applications/jolla-camera.desktop
-if [ -f "$DESKTOP" ] && ! grep -qF 'libcamerify' "$DESKTOP"; then
-  sed -i 's|^Exec=.*|Exec=/usr/bin/invoker --type=silica-media,silica-qt5 -A -- /usr/bin/libcamerify /usr/bin/jolla-camera|' "$DESKTOP" || :
+if [ -f "$DESKTOP" ] && ! grep -qF 'jolla-camera-wrapper' "$DESKTOP"; then
+  sed -i 's|^Exec=.*|Exec=/usr/bin/invoker --type=silica-media,silica-qt5 -A -- /usr/bin/jolla-camera-wrapper|' "$DESKTOP" || :
 fi
 
 %changelog
+* Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-13
+- Launch jolla-camera via wrappercamerabinsrc env wrapper (not bare libcamerify)
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-12
 - Autoload panel-novatek-nt36532; restore verbose bootargs for display bringup
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 0.1.5-11

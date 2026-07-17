@@ -1,0 +1,8 @@
+#!/bin/sh
+# Override booster/session env so camerabin uses wrappercamerabinsrc +
+# libcamerify V4L2 nodes (v4l2src alone is not a valid camerabin source).
+export QT_GSTREAMER_CAMERABIN_SRC=wrappercamerabinsrc
+export QT_GSTREAMER_CAMERABIN_VIDEOSRC=v4l2src
+export QT_GSTREAMER_CAMERABIN_FLAGS=15
+export QT_GSTREAMER_PLAYBIN_FLAGS=0
+exec /usr/bin/libcamerify /usr/bin/jolla-camera "$@"
