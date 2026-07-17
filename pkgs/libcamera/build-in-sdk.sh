@@ -65,21 +65,53 @@ rm -rf "$WORK"
 mkdir -p "$DEST" "$OUT" "$HOST_OUT" "$WORK/src"
 
 sb2 -t "$TARGET" true
+
+# Required build deps — must succeed. Keep optional packages out of this
+# transaction so a missing libevent-devel cannot roll back everything.
 sb2_install gcc gcc-c++ make binutils pkgconfig ninja git curl tar \
   xz gzip cmake python3 openssl \
   openssl-devel libdrm-devel libyaml-devel libelf-devel \
   libjpeg-turbo-devel libtiff-devel \
   gstreamer1.0-devel gstreamer1.0-plugins-base-devel \
-  glib2-devel libudev-devel zlib-devel \
-  libevent-devel || true
-# Alternate / pkg-config style names on some SFOS images
-sb2_install pkgconfig\(libdrm\) pkgconfig\(yaml-0.1\) pkgconfig\(libelf\) \
-  pkgconfig\(libjpeg\) pkgconfig\(libtiff-4\) \
-  pkgconfig\(gstreamer-1.0\) pkgconfig\(gstreamer-video-1.0\) \
-  pkgconfig\(glib-2.0\) pkgconfig\(libudev\) pkgconfig\(openssl\) \
-  pkgconfig\(libevent_pthreads\) || true
+  glib2-devel libudev-devel zlib-devel
 
-# cam needs libevent_pthreads; SFOS may lack it — keep libcamerify either way.
+# Capability-style names (SFOS prefers these for .pc providers)
+sb2_install \
+  pkgconfig\(libdrm\) \
+  pkgconfig\(yaml-0.1\) \
+  pkgconfig\(libelf\) \
+  pkgconfig\(libjpeg\) \
+  pkgconfig\(libtiff-4\) \
+  pkgconfig\(gstreamer-1.0\) \
+  pkgconfig\(gstreamer-base-1.0\) \
+  pkgconfig\(gstreamer-video-1.0\) \
+  pkgconfig\(gstreamer-allocators-1.0\) \
+  pkgconfig\(glib-2.0\) \
+  pkgconfig\(libudev\) \
+  pkgconfig\(libcrypto\) \
+  pkgconfig\(openssl\)
+
+# Optional: cam CLI only
+sb2_install libevent-devel pkgconfig\(libevent_pthreads\) || true
+
+require_pc() {
+  local pc="$1"
+  if ! sb2_t pkg-config --exists "$pc"; then
+    echo "ERROR: missing pkg-config module: $pc" >&2
+    sb2_t bash -lc "pkg-config --list-all 2>/dev/null | grep -iE 'gst|ssl|crypto|yaml|event' || true" >&2 || true
+    return 1
+  fi
+  echo "OK pkg-config: $pc ($(sb2_t pkg-config --modversion "$pc"))"
+}
+
+require_pc libcrypto || require_pc openssl
+require_pc gstreamer-1.0
+require_pc gstreamer-video-1.0
+require_pc glib-2.0
+require_pc libudev
+require_pc yaml-0.1 || true
+
+# cam needs libevent_pthreads; SFOS often lacks it — keep libcamerify either way.
 CAM_OPT=disabled
 if sb2_t pkg-config --exists libevent_pthreads; then
   CAM_OPT=enabled
