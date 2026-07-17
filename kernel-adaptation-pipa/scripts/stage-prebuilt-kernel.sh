@@ -71,14 +71,24 @@ fi
 
 # Sailfish kmod does not load CONFIG_MODULE_COMPRESS_ZSTD (.ko.zst).
 # Decompress in place so panel/DRM modules can load without an initramfs.
+# Fail hard: a soft warn previously shipped unbroken .ko.zst and blanked the panel.
 if [ -d "$DEST/lib/modules" ]; then
-  if command -v zstd >/dev/null 2>&1; then
-    find "$DEST/lib/modules" -type f -name '*.ko.zst' -print0 \
-      | while IFS= read -r -d '' f; do
-          zstd -d -f -q -o "${f%.zst}" "$f" && rm -f "$f"
-        done
-  else
-    echo "WARN: zstd not installed; leaving .ko.zst modules (panel may not load)" >&2
+  if ! command -v zstd >/dev/null 2>&1; then
+    echo "ERROR: zstd is required to decompress kernel modules for Sailfish" >&2
+    exit 1
+  fi
+  find "$DEST/lib/modules" -type f -name '*.ko.zst' -print0 \
+    | while IFS= read -r -d '' f; do
+        zstd -d -f -q -o "${f%.zst}" "$f" && rm -f "$f"
+      done
+  leftover=$(find "$DEST/lib/modules" -type f -name '*.ko.zst' | wc -l)
+  if [ "$leftover" -ne 0 ]; then
+    echo "ERROR: $leftover .ko.zst modules remain after decompress" >&2
+    exit 1
+  fi
+  if ! find "$DEST/lib/modules" -name 'panel-novatek-nt36532.ko' | grep -q .; then
+    echo "ERROR: panel-novatek-nt36532.ko missing after staging" >&2
+    exit 1
   fi
 fi
 
