@@ -250,7 +250,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: pkgs/sensorfw-qt5-libssc/out
-          key: sensorfw-ssc-${{ hashFiles('pkgs/sensorfw-qt5-libssc/build-in-sdk.sh', 'pkgs/sensorfw-qt5-libssc/rpm/**', 'pkgs/sensorfw-qt5-libssc/src/**', 'pkgs/libssc/files/libssc.pc', 'pkgs/libssc/include/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
+          key: sensorfw-ssc-${{ hashFiles('pkgs/sensorfw-qt5-libssc/build-in-sdk.sh', 'pkgs/sensorfw-qt5-libssc/rpm/**', 'pkgs/sensorfw-qt5-libssc/src/**', 'pkgs/libssc/build-in-sdk.sh', 'pkgs/libssc/rpm/**', 'pkgs/libssc/files/libssc.pc', 'pkgs/libssc/include/**') }}-sdk${{ env.SFOS_SDK_RELEASE }}
       - name: Cache firmware-pipa RPM
         id: cache-fw-rpm
         uses: actions/cache@v4
@@ -295,6 +295,7 @@ jobs:
           chmod +x pkgs/sensorfw-qt5-libssc/build-in-sdk.sh
           # Needs libssc (+ devel) from previous step / cache
           test -n "$(find pkgs/libssc/out -name 'libssc-0*.rpm')"
+          test -n "$(find pkgs/libssc/out -name 'libssc-devel*.rpm')"
           SFOS_SDK_RELEASE="$SFOS_SDK_RELEASE" SDK_IMAGE="$MESA_SDK_IMAGE" \
             bash pkgs/sensorfw-qt5-libssc/build-in-sdk.sh
           test -n "$(find pkgs/sensorfw-qt5-libssc/out -name 'sensorfw-qt5-libssc*.rpm')"
@@ -322,6 +323,7 @@ jobs:
           test -n "$(find pkgs/pipa-qcom-userspace/out -name 'pipa-qcom-userspace*.rpm')"
           test -n "$(find pkgs/pipa-hexagonrpc/out -name 'pipa-hexagonrpc*.rpm')"
           test -n "$(find pkgs/libssc/out -name 'libssc-0*.rpm')"
+          test -n "$(find pkgs/libssc/out -name 'libssc-devel*.rpm')"
           test -n "$(find pkgs/sensorfw-qt5-libssc/out -name 'sensorfw-qt5-libssc*.rpm')"
           test -n "$(find pkgs/firmware-pipa/out -name 'firmware-pipa*.rpm')"
           test -n "$(find pkgs/mesa-pipa/out -name 'mesa-pipa*.rpm')"

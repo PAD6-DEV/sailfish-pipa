@@ -109,7 +109,8 @@ bool SscAccelerometerAdaptor::startSensor()
             g_signal_handler_disconnect(sensor_, measurementHandlerId_);
             measurementHandlerId_ = 0;
         }
-        g_clear_object(reinterpret_cast<GObject **>(&sensor_));
+        g_object_unref(sensor_);
+        sensor_ = nullptr;
         return false;
     }
 
@@ -137,7 +138,8 @@ void SscAccelerometerAdaptor::stopSensor()
         g_signal_handler_disconnect(sensor_, measurementHandlerId_);
         measurementHandlerId_ = 0;
     }
-    g_clear_object(reinterpret_cast<GObject **>(&sensor_));
+    g_object_unref(sensor_);
+    sensor_ = nullptr;
     qCInfo(lcSensorFw) << id() << "SSC accelerometer stopped";
 }
 

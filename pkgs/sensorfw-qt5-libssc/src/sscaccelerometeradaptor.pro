@@ -17,7 +17,9 @@ SOURCES += \
 INCLUDEPATH += $$system(pkg-config --variable=includedir sensord-qt5 2>/dev/null)
 INCLUDEPATH += /usr/include/sensord-qt5 /usr/include/sensord-qt5/datatypes
 
-LIBS += -lsensorfw -lsensordatatypes-qt5
+# sensorfw core symbols are exported by sensorfwd for plugins. Only the
+# standalone datatype library is linked here.
+LIBS += -lsensordatatypes-qt5
 
 isEmpty(PLUGINPATH) {
     PLUGINPATH = $$[QT_INSTALL_LIBS]/sensord-qt5

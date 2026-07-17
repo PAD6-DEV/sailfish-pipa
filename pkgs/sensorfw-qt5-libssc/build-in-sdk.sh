@@ -48,9 +48,15 @@ sb2_install() {
 WORK="${HOME}/sensorfw-libssc-work"
 OUT="${WORK}/out"
 DEST="${OUT}/destdir"
+SRC="${WORK}/src"
+LIBSSC_STAGE="${WORK}/libssc-sysroot"
 HOST_OUT="${SSC_SENSORFW_HOST_OUT:-/sailfish-pipa/pkgs/sensorfw-qt5-libssc/out}"
 rm -rf "$WORK"
-mkdir -p "$DEST" "$OUT" "$HOST_OUT"
+mkdir -p "$DEST" "$OUT" "$SRC" "$LIBSSC_STAGE" "$HOST_OUT"
+
+# /sailfish-pipa is visible to the SDK container, but not inside sb2.
+# Copy every build input into $HOME before entering the target sandbox.
+cp -a /sailfish-pipa/pkgs/sensorfw-qt5-libssc/src/. "$SRC/"
 
 sb2 -t "$TARGET" true
 sb2_install gcc gcc-c++ make binutils pkgconfig qt5-qtcore-devel \
@@ -58,36 +64,38 @@ sb2_install gcc gcc-c++ make binutils pkgconfig qt5-qtcore-devel \
 # Package names vary across SFOS images
 sb2_install pkgconfig\(Qt5Core\) pkgconfig\(glib-2.0\) pkgconfig\(sensord-qt5\) || true
 
-# Install previously built libssc (+ devel) from adaptation out if present
+# Stage the previously built runtime + devel RPMs in a private sysroot.
+# Installing local RPMs into the sb2 target is both unnecessary and unreliable:
+# sb2 cannot resolve paths under /sailfish-pipa and its /usr is read-only here.
 LIBSSC_RPM="$(find /sailfish-pipa/pkgs/libssc/out -name 'libssc-0*.aarch64.rpm' ! -name '*devel*' 2>/dev/null | head -1 || true)"
 LIBSSC_DEVEL="$(find /sailfish-pipa/pkgs/libssc/out -name 'libssc-devel*.rpm' 2>/dev/null | head -1 || true)"
-if [ -n "$LIBSSC_RPM" ]; then
-  sb2_t rpm -Uvh --force "$LIBSSC_RPM" ${LIBSSC_DEVEL:+"$LIBSSC_DEVEL"} || \
-    sb2_install "$LIBSSC_RPM" ${LIBSSC_DEVEL:+"$LIBSSC_DEVEL"} || true
-fi
+test -n "$LIBSSC_RPM" || {
+  echo "ERROR: missing pkgs/libssc/out/libssc-0*.aarch64.rpm" >&2
+  exit 1
+}
+test -n "$LIBSSC_DEVEL" || {
+  echo "ERROR: missing pkgs/libssc/out/libssc-devel*.aarch64.rpm" >&2
+  exit 1
+}
 
-# Ensure libssc headers/pkgconfig exist (devel RPM or stage from source tree in image)
-if ! sb2_t pkg-config --exists libssc; then
-  echo "libssc.pc missing — staging headers from pkgs/libssc generated build tree fallback" >&2
-  # Build minimal prefix from vendored public headers snapshot if present
-  if [ -d /sailfish-pipa/pkgs/libssc/include/libssc ]; then
-    sb2_t bash -lc "
-      mkdir -p /usr/include /usr/lib64/pkgconfig
-      cp -a /sailfish-pipa/pkgs/libssc/include/libssc /usr/include/
-      cp -a /sailfish-pipa/pkgs/libssc/files/libssc.pc /usr/lib64/pkgconfig/libssc.pc
-      # stub .so link if only headers staged (prefer real RPM)
-      test -e /usr/lib64/libssc.so || ln -sf libssc.so.2 /usr/lib64/libssc.so || true
-    "
-  else
-    echo "ERROR: need libssc-devel RPM or pkgs/libssc/include/libssc" >&2
-    exit 1
-  fi
-fi
+for rpm in "$LIBSSC_RPM" "$LIBSSC_DEVEL"; do
+  (cd "$LIBSSC_STAGE" && rpm2cpio "$rpm" | cpio -idm --quiet)
+done
 
-SRC=/sailfish-pipa/pkgs/sensorfw-qt5-libssc/src
+# The packaged .pc uses prefix=/usr for the device. Rewrite only the private
+# build copy so pkg-config resolves headers and libraries in our staging tree.
+LIBSSC_PC="$LIBSSC_STAGE/usr/lib64/pkgconfig/libssc.pc"
+test -f "$LIBSSC_PC"
+sed -i "s|^prefix=/usr$|prefix=$LIBSSC_STAGE/usr|" "$LIBSSC_PC"
+test -f "$LIBSSC_STAGE/usr/include/libssc/libssc.h"
+test -e "$LIBSSC_STAGE/usr/lib64/libssc.so"
+
 sb2_t bash -lc "
   set -e
   export PATH=\"\$HOME/.local/bin:\$PATH\"
+  export PKG_CONFIG_PATH=$LIBSSC_STAGE/usr/lib64/pkgconfig:\${PKG_CONFIG_PATH:-}
+  export LD_LIBRARY_PATH=$LIBSSC_STAGE/usr/lib64:\${LD_LIBRARY_PATH:-}
+  export LIBRARY_PATH=$LIBSSC_STAGE/usr/lib64:\${LIBRARY_PATH:-}
   cd $SRC
   rm -rf build && mkdir build && cd build
   qmake ../sscaccelerometeradaptor.pro
