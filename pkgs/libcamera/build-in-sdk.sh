@@ -106,10 +106,15 @@ fetch_python_archive \
 
 cp -a "$WORK/src/jinja-${JINJA_VER}/src/jinja2" "$PYTHON_STAGE/"
 cp -a "$WORK/src/markupsafe-${MARKUPSAFE_VER}/src/markupsafe" "$PYTHON_STAGE/"
-cp -a "$WORK/src/ply-${PLY_VER}/src/ply" "$PYTHON_STAGE/"
+# ply-3.x ships the package at the archive root (not src/ply).
+cp -a "$WORK/src/ply-${PLY_VER}/ply" "$PYTHON_STAGE/"
 cp -a "$WORK/src/pyyaml-${PYYAML_VER}/lib/yaml" "$PYTHON_STAGE/"
 MESON="$WORK/src/meson-${MESON_VER}/meson.py"
 test -f "$MESON"
+test -d "$PYTHON_STAGE/jinja2"
+test -d "$PYTHON_STAGE/markupsafe"
+test -d "$PYTHON_STAGE/ply"
+test -d "$PYTHON_STAGE/yaml"
 
 sb2_t env PYTHONPATH="$PYTHON_STAGE" python3 "$MESON" --version
 sb2_t env PYTHONPATH="$PYTHON_STAGE" python3 -c 'import jinja2, ply, yaml'
