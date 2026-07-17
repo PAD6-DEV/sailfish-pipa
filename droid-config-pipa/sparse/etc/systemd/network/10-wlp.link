@@ -1,0 +1,9 @@
+# Fallback when no persisted MAC exists yet.
+# persist-wlan-macaddr.sh prepare writes /run/.../10-wlp-mac.link with the
+# saved address (MACAddressPolicy=none) once /persist/wifi/.macaddr exists.
+[Match]
+Driver=ath11k_pci
+
+[Link]
+MACAddressPolicy=permanent
+NamePolicy=keep kernel database onboard slot path

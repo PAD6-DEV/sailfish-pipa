@@ -1,0 +1,6 @@
+# Mark Novatek / Goodix panels as touchscreens for Qt evdevtouch.
+ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="NVTCap*", ENV{ID_INPUT}="1", ENV{ID_INPUT_TOUCHSCREEN}="1"
+ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="*NVT*", ENV{ID_INPUT}="1", ENV{ID_INPUT_TOUCHSCREEN}="1"
+ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="nvt*", ENV{ID_INPUT}="1", ENV{ID_INPUT_TOUCHSCREEN}="1"
+ACTION=="add|change", KERNEL=="event*", DRIVERS=="nvt_ts|novatek_nvt_ts", ENV{ID_INPUT}="1", ENV{ID_INPUT_TOUCHSCREEN}="1"
+ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="*Goodix*", ENV{ID_INPUT}="1", ENV{ID_INPUT_TOUCHSCREEN}="1"

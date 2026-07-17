@@ -1,6 +1,6 @@
 Name:           mesa-pipa
 Version:        24.1.7
-Release:        1
+Release:        2
 Summary:        Mesa freedreno/msm for Xiaomi Pad 6 (Sailfish OS aarch64)
 License:        MIT
 URL:            https://www.mesa3d.org/
@@ -10,25 +10,51 @@ Source0:        mesa-pipa-tree.tar.gz
 %global debug_package %{nil}
 AutoReqProv:    no
 
-# Replace stock Mesa (no freedreno/msm on SFOS) with this port.
+# Replace stock Mesa (SFOS ships llvmpipe-named packages; no freedreno/msm).
 Provides:       mesa-dri-drivers = %{version}
 Provides:       mesa-libEGL = %{version}
 Provides:       mesa-libGLESv1 = %{version}
 Provides:       mesa-libGLESv2 = %{version}
 Provides:       mesa-libgbm = %{version}
+Provides:       mesa-libglapi = %{version}
 Provides:       libEGL = %{version}
 Provides:       libGLESv2 = %{version}
+Provides:       mesa-llvmpipe-libEGL = %{version}
+Provides:       mesa-llvmpipe-libGLESv1 = %{version}
+Provides:       mesa-llvmpipe-libGLESv2 = %{version}
+Provides:       mesa-llvmpipe-libgbm = %{version}
+Provides:       mesa-llvmpipe-libglapi = %{version}
+Provides:       mesa-llvmpipe-libGL = %{version}
+Provides:       mesa-llvmpipe-dri-drivers = %{version}
+
 Obsoletes:      mesa-dri-drivers < %{version}-%{release}
 Obsoletes:      mesa-libEGL < %{version}-%{release}
 Obsoletes:      mesa-libGLESv1 < %{version}-%{release}
 Obsoletes:      mesa-libGLESv2 < %{version}-%{release}
 Obsoletes:      mesa-libgbm < %{version}-%{release}
+Obsoletes:      mesa-libglapi < %{version}-%{release}
+Obsoletes:      mesa-llvmpipe-libEGL
+Obsoletes:      mesa-llvmpipe-libGLESv1
+Obsoletes:      mesa-llvmpipe-libGLESv2
+Obsoletes:      mesa-llvmpipe-libgbm
+Obsoletes:      mesa-llvmpipe-libglapi
+Obsoletes:      mesa-llvmpipe-libGL
+Obsoletes:      mesa-llvmpipe-dri-drivers
+
+Conflicts:      mesa-llvmpipe-libEGL
+Conflicts:      mesa-llvmpipe-libGLESv1
+Conflicts:      mesa-llvmpipe-libGLESv2
+Conflicts:      mesa-llvmpipe-libgbm
+Conflicts:      mesa-llvmpipe-libglapi
+Conflicts:      mesa-llvmpipe-libGL
+Conflicts:      mesa-llvmpipe-dri-drivers
 
 # Runtime deps (libdrm, wayland, zlib, expat) come from SFOS base + pattern.
 
 %description
 Mesa 24.1.7 with gallium freedreno (msm KMD) and swrast, built for Sailfish OS
-aarch64 (glibc 2.30) for Xiaomi Pad 6 (Adreno 650 / SM8250).
+aarch64 (glibc 2.30) for Xiaomi Pad 6 (Adreno 650 / SM8250). Replaces stock
+mesa-llvmpipe-* packages.
 
 %prep
 %setup -q -n destdir
@@ -49,5 +75,7 @@ rm -rf %{buildroot}/usr/include \
 /usr
 
 %changelog
+* Fri Jul 17 2026 Porter <porter@local> - 24.1.7-2
+- Provide/Obsolete/Conflict mesa-llvmpipe-* so mic can replace stock Mesa
 * Thu Jul 16 2026 Porter <porter@local> - 24.1.7-1
 - Package pipa freedreno Mesa tarball for adaptation repo

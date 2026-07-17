@@ -8,25 +8,29 @@
 
 .nofail
 
-.fail
-
-# Transitional check as keepalive module is moved away from droid modules.
+# Optional modules — skip quietly when the RPM is not on the image yet
 .ifexists module-keepalive.so
- load-module module-keepalive
-.else
- load-module module-droid-keepalive
+load-module module-keepalive
+.endif
+.ifexists module-droid-keepalive.so
+load-module module-droid-keepalive
 .endif
 
 ### Start load native ALSA driver (sm8250 UCM HiFi, 48 kHz)
+.fail
 load-module module-alsa-card device_id=0 rate=48000 namereg_fail=false tsched=yes use_ucm=yes
+.nofail
 
 ### END load native ALSA drivers
 
+.ifexists module-meego-parameters.so
 load-module module-meego-parameters cache=1 directory=/var/lib/nemo-pulseaudio-parameters use_voice=false
-load-module module-meego-mainvolume virtual_stream=true unmute_delay=600
+.endif
 
-### Automatically restore the volume of streams
+.fail
+load-module module-meego-mainvolume virtual_stream=true unmute_delay=600
 load-module module-stream-restore-nemo restore_device=no restore_volume=yes restore_muted=no route_table=/etc/pulse/x-maemo-route.table fallback_table=/etc/pulse/x-maemo-stream-restore.table use_voice=false
+.nofail
 
 load-module module-match table=/etc/pulse/x-maemo-match.table key=application.name
 
@@ -38,7 +42,9 @@ load-module module-null-source source_name=source.null rate=48000
 
 load-module module-bluetooth-discover headset=droid
 
+.ifexists module-policy-enforcement.so
 load-module module-policy-enforcement
+.endif
 
 load-module module-role-ducking trigger_roles=notification,warning ducking_roles=x-maemo volume=-12dB duck_while_corked=true
 
@@ -49,9 +55,7 @@ load-module module-esound-protocol-unix
 load-module module-native-protocol-unix
 
 .ifexists module-gconf.so
-.nofail
 load-module module-gconf
-.fail
 .endif
 
 ### Make sure we always have a sink around, even if it is a null sink.
@@ -75,6 +79,7 @@ load-module module-systemd-login
 load-module module-dbus-protocol
 .endif
 
-### Default to null; policy-enforcement moves streams to the real ALSA sinks.
-set-default-sink sink.null
-set-default-source source.null
+### Use the native UCM devices by default. Policy-enforcement can still route
+### idle and special-role streams to the null devices defined above.
+set-default-sink alsa_output.0.HiFi___ucm0001.hw_X6_0__sink
+set-default-source alsa_input.0.HiFi___ucm0001.hw_X6_2__source

@@ -1,7 +1,7 @@
 %package -n patterns-sailfish-device-adaptation-pipa
 Summary: Sailfish HW Adaptation Xiaomi Pad 6 (pipa)
 
-# These drivers are built into the eglfs platform driver (pinetab2)
+# evdev touch/keyboard/mouse are built into qt5-plugin-platform-eglfs on pipa
 Obsoletes: qt5-plugin-generic-evdev
 
 # Graphics — pipa freedreno Mesa (Provides mesa-libEGL / dri / gbm / GLES)
@@ -11,7 +11,8 @@ Requires: qt5-plugin-platform-eglfs
 Requires: mtdev
 
 # Splash screen
-Requires: yamuisplash
+Requires: plymouth-lite
+Requires: plymouth-lite-theme-default
 
 # Bluetooth tools
 Requires: bluez5-tools
@@ -22,8 +23,22 @@ Requires: libngf-qt5-qtfeedback
 # Sensors — mainline IIO path (not hybris)
 #Requires: hybris-libsensorfw-qt5
 
-# Pulseaudio
+# Pulseaudio — MainVolume / ringtone Settings need these modules
 Requires: pulseaudio-module-keepalive
+Requires: pulseaudio-modules-nemo-parameters
+Requires: pulseaudio-policy-enforcement
+Requires: policy-settings-common
+
+# OHM resource policy (lipstick ScaleButton / volume keys / Qt Multimedia)
+Requires: libdres
+Requires: ohm-plugin-resolver
+Requires: ohm-plugin-ruleengine
+Requires: ohm-plugin-media
+Requires: ohm-plugin-profile
+Requires: ohm-plugin-accessories
+Requires: ohm-plugin-signaling
+Requires: ohm-plugin-telephony
+Requires: ohm-plugins-dbus
 
 # Connman
 Requires: sailfish-connman-plugin-tethering-keepalive
@@ -62,7 +77,7 @@ Requires: v4l-utils
 
 # Firmware / regulatory
 Requires: wireless-regdb
-#Requires: firmware-pipa
+Requires: firmware-pipa
 
 Requires: kernel-adaptation-pipa
 Requires: droid-config-pipa-sailfish

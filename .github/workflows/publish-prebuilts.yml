@@ -17,6 +17,7 @@ on:
       - "bootstrap/**"
       - "pkgs/**"
       - "droid-config-pipa/**"
+      - "droid-hal-version-pipa/**"
       - "scripts/stage-pages.sh"
       - "scripts/stage-adaptation-pages.sh"
       - "scripts/createrepo-local.sh"

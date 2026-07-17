@@ -17,3 +17,4 @@ out/
 *.img
 pkgs/*/out/
 prebuilts/qcom-userspace/
+.rpmbuild-tmp/

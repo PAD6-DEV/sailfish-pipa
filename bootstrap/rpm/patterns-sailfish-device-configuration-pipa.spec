@@ -1,5 +1,5 @@
 Name:           patterns-sailfish-device-configuration-pipa
-Version:        0.3.4
+Version:        0.3.7
 Release:        1
 Summary:        Sailfish configuration pattern for Xiaomi Pad 6
 License:        BSD
@@ -17,7 +17,9 @@ Requires:       jolla-settings-accounts-extensions-3rd-party-all
 Requires:       geoclue-provider-mlsdb
 Requires:       csd
 Requires:       droid-config-pipa
+Requires:       droid-config-pipa-pulseaudio-settings
 Requires:       kernel-adaptation-pipa
+Requires:       droid-hal-version-pipa
 Requires:       mesa-pipa
 Requires:       pipa-qcom-userspace
 Requires:       pipa-hexagonrpc
@@ -37,6 +39,7 @@ Requires:       strace
 Requires:       kmod
 Requires:       mtdev
 Requires:       qt5-plugin-platform-eglfs
+Recommends:     vi
 Recommends:     sailfishos-chum-gui
 Recommends:     mce-tools
 Recommends:     gdb
@@ -49,6 +52,12 @@ normal Sailfish session.
 %files
 
 %changelog
+* Fri Jul 17 2026 Porter <porter@local> - 0.3.7-1
+- Align Recommends with pinetab2 (vi)
+* Fri Jul 17 2026 Porter <porter@local> - 0.3.6-1
+- Require droid-config-pipa-pulseaudio-settings for MainVolume tables
+* Fri Jul 17 2026 Porter <porter@local> - 0.3.5-1
+- Require droid-hal-version-pipa so images ship /etc/hw-release
 * Thu Jul 16 2026 Porter <porter@local> - 0.3.4-1
 - Pull alsa-utils and alsa-ucm-conf into mic images for native audio
 * Thu Jul 16 2026 Porter <porter@local> - 0.3.3-1

@@ -2,20 +2,24 @@
 Description=Load wifi module
 DefaultDependencies=false
 Conflicts=shutdown.target
-After=dbus.service
+After=dbus.service systemd-udevd.service
+Before=connman.service network.target
 
 [Service]
-Type=simple
+Type=oneshot
 RemainAfterExit=yes
-ExecStartPre=/usr/bin/droid/persist-wlan-macaddr.sh
 ExecStartPre=/sbin/modprobe qrtr
 ExecStartPre=/sbin/modprobe qrtr_smd
+# Install stable MAC into /run before the netdev is created
+ExecStartPre=/usr/bin/droid/persist-wlan-macaddr.sh prepare
 ExecStart=/sbin/modprobe ath11k_pci
+# ath11k invents a new MAC every load; persist/re-apply after the iface exists
+# so ConnMan wifi_<mac>_... favorites keep matching across reboot.
 ExecStartPost=/bin/sleep 2
+ExecStartPost=/usr/bin/droid/persist-wlan-macaddr.sh
 ExecStartPost=/usr/sbin/rfkill unblock wifi
 ExecStop=/sbin/modprobe -r ath11k_pci
-Restart=on-failure
-RestartSec=2
 
 [Install]
 WantedBy=basic.target
+WantedBy=connman.service
