@@ -68,9 +68,8 @@ Requires: rfkill
 # enable device lock and allow to select untrusted software
 Requires: jolla-devicelock-plugin-encsfa
 
-# sound
+# sound — UCM profiles ship in droid-config-pipa (SFOS repos lack alsa-ucm-conf)
 Requires: alsa-utils
-Requires: alsa-ucm-conf
 
 # Cameras
 Requires: v4l-utils
