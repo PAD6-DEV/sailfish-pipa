@@ -107,9 +107,15 @@ QMI_SRC="$WORK/src/libqmi-${LIBQMI_VER}"
 SSC_SRC="$(find "$WORK/src" -maxdepth 1 -type d \( -name 'libssc' -o -name "libssc-*" \) ! -name 'libssc-work' | head -1)"
 test -n "$SSC_SRC" && test -f "$SSC_SRC/meson.build"
 
+# SFOS sysroot lacks linux/qrtr.h — stage vendored UAPI (same as pipa-qcom-userspace).
+mkdir -p "$HOME/uapi-linux/linux"
+cp -a /sailfish-pipa/pkgs/libssc/files/linux/qrtr.h "$HOME/uapi-linux/linux/qrtr.h"
+cp -a /sailfish-pipa/pkgs/libssc/files/sfos-compat.h "$HOME/uapi-linux/sfos-compat.h"
+UAPI_CFLAGS="-I$HOME/uapi-linux -include $HOME/uapi-linux/sfos-compat.h"
+
 pc_env() {
   echo "export PKG_CONFIG_PATH=$DEST/usr/lib64/pkgconfig:$DEST/usr/lib/pkgconfig:\${PKG_CONFIG_PATH:-}"
-  echo "export CFLAGS='-I$DEST/usr/include ${CFLAGS:-}'"
+  echo "export CFLAGS='$UAPI_CFLAGS -I$DEST/usr/include ${CFLAGS:-}'"
   echo "export CPPFLAGS=\"\$CFLAGS\""
   echo "export LDFLAGS='-L$DEST/usr/lib64 -L$DEST/usr/lib ${LDFLAGS:-}'"
   echo "export LD_LIBRARY_PATH=$DEST/usr/lib64:$DEST/usr/lib:\${LD_LIBRARY_PATH:-}"
@@ -140,12 +146,16 @@ sb2_t bash -lc "
 fix_pc_prefix
 
 echo "==> libqrtr-glib ${LIBQRTR_GLIB_VER}"
+# SFOS headers lack linux/qrtr.h; skip the configure-time assert and compile with vendored UAPI.
+sed -i "/assert(cc.has_header('linux\\/qrtr.h')/d" "$QRTR_SRC/meson.build"
 sb2_t bash -lc "
   set -e
   $(pc_env)
   cd $QRTR_SRC
+  rm -rf build
   meson setup build --prefix=/usr --libdir=lib64 \
-    -Dintrospection=false -Dgtk_doc=false
+    -Dintrospection=false -Dgtk_doc=false \
+    -Dc_args=\"\$CFLAGS\"
   meson compile -C build -j$JOBS
   DESTDIR=$DEST meson install -C build
 "
@@ -167,7 +177,8 @@ sb2_t bash -lc "
     -Dudev=false \
     -Dmm_runtime_check=false \
     -Dcollection=full \
-    -Dgtk_doc=false
+    -Dgtk_doc=false \
+    -Dc_args=\"\$CFLAGS\"
   meson compile -C build -j$JOBS
   DESTDIR=$DEST meson install -C build
 "
@@ -192,7 +203,7 @@ sb2_t bash -lc "
   set -e
   $(pc_env)
   cd $SSC_SRC
-  meson setup build --prefix=/usr --libdir=lib64
+  meson setup build --prefix=/usr --libdir=lib64 -Dc_args=\"\$CFLAGS\"
   meson compile -C build -j$JOBS
   DESTDIR=$DEST meson install -C build
 "
