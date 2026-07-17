@@ -10,7 +10,7 @@ STAGE="$ROOT/prebuilt"
 
 chmod +x "$ROOT/scripts/stage-prebuilt-kernel.sh"
 if [[ "$SRC" == https://* || "$SRC" == http://* ]]; then
-  tmp=$(mktemp)
+  tmp=$(mktemp --suffix=.pkg.tar.xz)
   curl -fL --retry 3 -o "$tmp" "$SRC"
   bash "$ROOT/scripts/stage-prebuilt-kernel.sh" "$tmp"
   rm -f "$tmp"

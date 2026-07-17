@@ -14,24 +14,53 @@ TMP=""
 cleanup() { [ -n "$TMP" ] && rm -rf "$TMP"; }
 trap cleanup EXIT
 
-if [ -f "$SRC" ] && [[ "$SRC" == *.pkg.tar.xz || "$SRC" == *.tar.xz || "$SRC" == *.tar.zst ]]; then
+extract_archive() {
+  local archive="$1"
   TMP=$(mktemp -d)
-  case "$SRC" in
-    *.zst) tar -C "$TMP" --zstd -xf "$SRC" ;;
-    *) tar -C "$TMP" -xf "$SRC" ;;
-  esac
+  tar -C "$TMP" -xf "$archive"
   SRC="$TMP"
+}
+
+if [ -f "$SRC" ]; then
+  case "$SRC" in
+    *.pkg.tar.xz|*.tar.xz|*.tar.zst|*.tar.gz|*.tgz)
+      extract_archive "$SRC"
+      ;;
+    *)
+      # Downloads may lack a suffix (mktemp); detect compressed tar by content.
+      if xz -t "$SRC" 2>/dev/null || gzip -t "$SRC" 2>/dev/null; then
+        extract_archive "$SRC"
+      fi
+      ;;
+  esac
 fi
 
-if [ -f "$SRC/boot/Image" ] || [ -f "$SRC/boot/Image.gz" ]; then
+if [ -d "$SRC/boot" ]; then
   cp -a "$SRC/boot/." "$DEST/boot/"
-elif [ -f "$SRC/Image" ]; then
-  cp -a "$SRC/Image" "$DEST/boot/Image"
+elif [ -f "$SRC/Image" ] || [ -f "$SRC/Image.gz" ]; then
+  [ -f "$SRC/Image" ] && cp -a "$SRC/Image" "$DEST/boot/Image"
   [ -f "$SRC/Image.gz" ] && cp -a "$SRC/Image.gz" "$DEST/boot/Image.gz"
   [ -d "$SRC/dtbs" ] && cp -a "$SRC/dtbs" "$DEST/boot/dtbs"
 else
-  echo "No Image under $SRC" >&2
+  echo "No boot/ or Image under $SRC" >&2
+  find "$SRC" -maxdepth 3 -type f 2>/dev/null | head -40 >&2 || true
   exit 1
+fi
+
+# Normalize Arch linux-pipa names to /boot/Image
+if [ ! -f "$DEST/boot/Image" ]; then
+  if [ -f "$DEST/boot/Image.gz" ]; then
+    gunzip -c "$DEST/boot/Image.gz" > "$DEST/boot/Image"
+  elif compgen -G "$DEST/boot/vmlinuz-*.uncompressed" >/dev/null; then
+    cp -a "$(compgen -G "$DEST/boot/vmlinuz-*.uncompressed" | head -1)" "$DEST/boot/Image"
+  elif compgen -G "$DEST/boot/vmlinuz-*" >/dev/null; then
+    vmlinuz="$(compgen -G "$DEST/boot/vmlinuz-*" | grep -v '\.uncompressed$' | head -1)"
+    if gzip -t "$vmlinuz" 2>/dev/null; then
+      gunzip -c "$vmlinuz" > "$DEST/boot/Image"
+    else
+      cp -a "$vmlinuz" "$DEST/boot/Image"
+    fi
+  fi
 fi
 
 if [ -d "$SRC/usr/lib/modules" ]; then
@@ -40,8 +69,10 @@ elif [ -d "$SRC/lib/modules" ]; then
   cp -a "$SRC/lib/modules" "$DEST/lib/modules"
 fi
 
-if [ ! -f "$DEST/boot/Image" ] && [ -f "$DEST/boot/Image.gz" ]; then
-  gunzip -c "$DEST/boot/Image.gz" > "$DEST/boot/Image"
+if [ ! -f "$DEST/boot/Image" ]; then
+  echo "ERROR: could not locate kernel Image under $DEST/boot" >&2
+  ls -la "$DEST/boot" >&2 || true
+  exit 1
 fi
 
 sz=$(wc -c < "$DEST/boot/Image")
