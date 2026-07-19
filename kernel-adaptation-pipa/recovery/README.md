@@ -8,8 +8,9 @@
 
 Decompressing `.ko.zst` → `.ko` is necessary but **not sufficient**.
 
-The port previously worked on **`7.1.3-pipa`** (that package is gone from
-pipa-pkgs; only `7.1.0-1` remains).
+The port previously worked on **`7.1.3-pipa`**. Current Sailfish images use
+**`linux-pipa` 7.1.0-4** from pipa-pkgs (panel/backlight built-in + SoftISP
+camera bring-up).
 
 ## Proper fix
 

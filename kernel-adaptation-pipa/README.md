@@ -13,12 +13,15 @@ Kernel source is [PipaDB/linux](https://github.com/PipaDB/linux) `pipa/7.1`
 
 ```bash
 curl -fL -o /tmp/linux-pipa.pkg.tar.xz \
-  https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.0-2-aarch64.pkg.tar.xz
-./scripts/stage-prebuilt-kernel.sh /tmp/extract-dir
+  https://thespider2.github.io/pipa-pkgs/repo/linux-pipa-7.1.0-4-aarch64.pkg.tar.xz
+./scripts/stage-prebuilt-kernel.sh /tmp/linux-pipa.pkg.tar.xz
 # or:
 mkdir -p /tmp/lp && tar -C /tmp/lp -xf /tmp/linux-pipa.pkg.tar.xz
 ./scripts/stage-prebuilt-kernel.sh /tmp/lp
 ```
+
+`7.1.0-4` includes SoftISP camera bring-up (OV13B10/HI846 @ 19.2 MHz MCLK,
+CAMCC/CAMSS fixes) from pipa-pkgs.
 
 Expect `prebuilt/boot/Image` (~40MB), `prebuilt/boot/dtbs/qcom/sm8250-xiaomi-pipa*.dtb`,
 and `prebuilt/lib/modules/<kver>/`.

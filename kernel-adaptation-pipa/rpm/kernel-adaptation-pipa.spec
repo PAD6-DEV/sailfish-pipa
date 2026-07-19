@@ -1,6 +1,6 @@
 Name:           kernel-adaptation-pipa
 Version:        7.1.0
-Release:        6
+Release:        7
 Summary:        Linux kernel for Xiaomi Pad 6 (Sailfish OS)
 License:        GPL-2.0-only
 URL:            https://github.com/PipaDB/linux/tree/pipa/7.1
@@ -15,8 +15,9 @@ Obsoletes:      kernel-adaptation-pipa < 7.1.0
 
 %description
 Kernel Image, DTBs, and modules for Xiaomi Pad 6 from PipaDB linux
-pipa/7.1 (linux-pipa). Replaces the bootstrap placeholder RPM that
-previously overwrote /boot/Image with a few-byte stub.
+pipa/7.1 (linux-pipa 7.1.0-4, SoftISP camera bring-up). Replaces the
+bootstrap placeholder RPM that previously overwrote /boot/Image with a
+few-byte stub.
 
 %prep
 %setup -q -n destdir
@@ -47,6 +48,9 @@ rm -f %{buildroot}/boot/vmlinuz-*
 /usr/share/kernel-adaptation-pipa
 
 %changelog
+* Sun Jul 19 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-7
+- Pack linux-pipa 7.1.0-4 SoftISP camera bring-up (OV13B10/HI846 MCLK,
+  CAMCC/CAMSS patches from pipa-pkgs 6437f09 / 5e5527ee)
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-6
 - Drop Arch vmlinuz-* duplicates so rpmbuild does not leave unpackaged files
 * Fri Jul 17 2026 aymanrar2c <aymanrar2c@gmail.com> - 7.1.0-5
